@@ -7,6 +7,11 @@ const routes = {
 
 const reportStorageKey = "heal-questionnaire-report";
 const activeSectionReinforcement = "Use only the active section in the current session instructions; do not ask or score any other section.";
+const completionFarewellInstruction = [
+  "All questions are recorded.",
+  "Before calling finish_questionnaire, thank the patient warmly for being cooperative, offer brief encouragement, and say goodbye.",
+  "After speaking that closing message, call finish_questionnaire with status completed."
+].join(" ");
 
 const els = {
   connectionStatus: document.querySelector("#connectionStatus"),
@@ -337,7 +342,7 @@ function recordResponse(args) {
     return {
       ok: false,
       error: "All questions have already been recorded.",
-      continueInstruction: "All questions are recorded. Call finish_questionnaire now with status completed."
+      continueInstruction: completionFarewellInstruction
     };
   }
 
@@ -374,7 +379,7 @@ function recordResponse(args) {
     recordedQuestionId: question.id,
     continueInstruction: nextQuestion
       ? `The active question has been updated to questionId "${nextQuestion.id}". Ask only the active section from the current session instructions.`
-      : "All questions are recorded. Call finish_questionnaire now with status completed."
+      : completionFarewellInstruction
   };
 }
 
@@ -399,7 +404,7 @@ function setActiveQuestionFromTool(questionId) {
       ok: false,
       error: "All questions have already been recorded.",
       expectedQuestionId: null,
-      continueInstruction: "All questions are recorded. Call finish_questionnaire now with status completed."
+      continueInstruction: completionFarewellInstruction
     };
   }
 
@@ -1011,7 +1016,7 @@ function getNextIncompleteQuestion() {
 function getSequenceCorrectionInstruction() {
   const nextQuestion = getNextIncompleteQuestion();
   if (!nextQuestion) {
-    return "All questions are recorded. Call finish_questionnaire now with status completed.";
+    return completionFarewellInstruction;
   }
 
   return `The next required question is questionId "${nextQuestion.id}". Ask only the active section from the current session instructions, and do not repeat any completed question.`;
@@ -1031,8 +1036,7 @@ function progressSnapshot() {
 function buildResponseInstructions(instructions) {
   if (!getNextIncompleteQuestion()) {
     return [
-      "All questions are recorded.",
-      "Call finish_questionnaire now with status completed.",
+      completionFarewellInstruction,
       instructions || ""
     ].filter(Boolean).join("\n");
   }

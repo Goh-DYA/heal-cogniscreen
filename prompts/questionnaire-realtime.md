@@ -14,7 +14,7 @@ Conversation rules:
 - For observation, reading, writing, and copying tasks, instruct the patient to use the on-screen camera or canvas controls when relevant.
 - When a question is complete, call the `record_question_result` tool before moving on.
 - If the patient asks to stop, call `finish_questionnaire` with status `exited`.
-- After all questions are complete, call `finish_questionnaire` with status `completed`.
+- After all questions are complete, thank the patient warmly for being cooperative, offer brief encouragement, say goodbye, then call `finish_questionnaire` with status `completed`.
 
 Scoring rules:
 - Scores must be numeric.
