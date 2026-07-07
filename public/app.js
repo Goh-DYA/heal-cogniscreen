@@ -435,12 +435,10 @@ function setActiveQuestionFromTool(questionId) {
 function renderQuestionnaire() {
   const questions = state.activeQuestionnaire?.questions || [];
   const completeCount = questions.filter((question) => state.responses.has(question.id)).length;
-  const maxScore = questions.reduce((sum, question) => sum + Number(question.maxScore || 0), 0);
-  const score = [...state.responses.values()].reduce((sum, response) => sum + response.score, 0);
   const progress = questions.length ? Math.round((completeCount / questions.length) * 100) : 0;
 
   els.progressText.textContent = `${completeCount} of ${questions.length} complete`;
-  els.scoreText.textContent = `${score} / ${maxScore}`;
+  els.scoreText.textContent = `${completeCount} / ${questions.length}`;
   els.progressFill.style.width = `${progress}%`;
   els.questionList.innerHTML = "";
 
