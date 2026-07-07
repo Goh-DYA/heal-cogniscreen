@@ -237,24 +237,14 @@ function loadMmseQuestionnaire() {
 }
 
 function buildInstructions(questionnaire) {
-  const compactQuestions = questionnaire.questions.map((question, index) => ({
-    order: index + 1,
-    id: question.id,
-    section: question.section,
-    capability: question.capability,
-    question: question.question,
-    questionChinese: question.questionChinese,
-    scoringNotes: question.scoringNotes,
-    maxScore: question.maxScore
-  }));
-
   return [
     baseInstructions,
     "",
     `Selected questionnaire: ${questionnaire.title}`,
     `Questionnaire ID: ${questionnaire.id}`,
-    "Questionnaire JSON:",
-    JSON.stringify(compactQuestions)
+    "The client UI is the source of truth for the active section.",
+    "Question details will be provided through session updates.",
+    "Use only the active question details from the latest session instructions."
   ].join("\n");
 }
 

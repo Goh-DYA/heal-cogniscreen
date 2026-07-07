@@ -6,6 +6,7 @@ const routes = {
 };
 
 const reportStorageKey = "heal-questionnaire-report";
+const activeSectionReinforcement = "Use only the active section in the current session instructions; do not ask or score any other section.";
 
 const els = {
   connectionStatus: document.querySelector("#connectionStatus"),
@@ -372,7 +373,7 @@ function recordResponse(args) {
     ok: true,
     recordedQuestionId: question.id,
     continueInstruction: nextQuestion
-      ? `Move on immediately to questionId "${nextQuestion.id}". Ask only that question now and do not repeat any completed question.`
+      ? `The active question has been updated to questionId "${nextQuestion.id}". Ask only the active section from the current session instructions.`
       : "All questions are recorded. Call finish_questionnaire now with status completed."
   };
 }
@@ -388,6 +389,7 @@ function setActiveQuestion(questionId) {
   els.activeQuestionText.textContent = question.question;
   renderModality(question.capability);
   renderQuestionnaire();
+  updateRealtimeSessionInstructions(question);
 }
 
 function setActiveQuestionFromTool(questionId) {
@@ -426,7 +428,7 @@ function setActiveQuestionFromTool(questionId) {
   return {
     ok: true,
     expectedQuestionId: question.id,
-    continueInstruction: `The active question is "${question.id}". Ask this question now and do not ask any other question until it is recorded.`
+    continueInstruction: `The active question is "${question.id}". Ask only the active section from the current session instructions until it is recorded.`
   };
 }
 
@@ -568,6 +570,19 @@ function sendImageArtifact(dataUrl, message) {
   persistReport("");
 }
 
+function updateRealtimeSessionInstructions(question) {
+  if (!state.dataChannel || state.dataChannel.readyState !== "open") {
+    return;
+  }
+
+  state.dataChannel.send(JSON.stringify({
+    type: "session.update",
+    session: {
+      instructions: buildFocusedInstructions(question)
+    }
+  }));
+}
+
 function sendRealtimeResponse(instructions) {
   if (!state.dataChannel || state.dataChannel.readyState !== "open") {
     appendTranscript("system", "Realtime connection is not ready.");
@@ -575,11 +590,9 @@ function sendRealtimeResponse(instructions) {
   }
 
   const response = {
-    output_modalities: ["audio"]
+    output_modalities: ["audio"],
+    instructions: buildResponseInstructions(instructions)
   };
-  if (instructions) {
-    response.instructions = instructions;
-  }
 
   state.dataChannel.send(JSON.stringify({
     type: "response.create",
@@ -1003,7 +1016,7 @@ function getSequenceCorrectionInstruction() {
     return "All questions are recorded. Call finish_questionnaire now with status completed.";
   }
 
-  return `The next required question is questionId "${nextQuestion.id}". Ask only that question now, and do not repeat any completed question.`;
+  return `The next required question is questionId "${nextQuestion.id}". Ask only the active section from the current session instructions, and do not repeat any completed question.`;
 }
 
 function progressSnapshot() {
@@ -1015,6 +1028,66 @@ function progressSnapshot() {
     activeQuestionId: state.activeQuestionId,
     completedQuestionIds: [...state.responses.keys()]
   };
+}
+
+function buildResponseInstructions(instructions) {
+  if (!getNextIncompleteQuestion()) {
+    return [
+      "All questions are recorded.",
+      "Call finish_questionnaire now with status completed.",
+      instructions || ""
+    ].filter(Boolean).join("\n");
+  }
+
+  const question = getQuestion(state.activeQuestionId);
+  const focusedInstructions = question ? buildFocusedInstructions(question) : activeSectionReinforcement;
+  return [
+    focusedInstructions,
+    "",
+    activeSectionReinforcement,
+    instructions ? `Current turn instruction: ${instructions}` : ""
+  ].filter(Boolean).join("\n");
+}
+
+function buildFocusedInstructions(question) {
+  const questions = state.activeQuestionnaire?.questions || [];
+  const completedCount = questions.filter((item) => state.responses.has(item.id)).length;
+  return [
+    "You are a clinical questionnaire assistant administering a medical screening questionnaire by voice.",
+    "You are not diagnosing, treating, or giving medical advice.",
+    "The client UI is the source of truth for questionnaire order and active section.",
+    "Administer exactly one active section at a time.",
+    activeSectionReinforcement,
+    "Do not mention, preview, combine, ask, score, or infer any other questionnaire section.",
+    "If the patient discusses another section, briefly redirect to the active section.",
+    "Personalize phrasing to the patient context if provided, but do not change the scoring requirement.",
+    "Ask the patient all aspects needed from the active section notes to fully assess the active section.",
+    "Avoid spoonfeeding the patient with the examples.",
+    "Do not move on until the current answer is complete enough to assign a score.",
+    "Ask focused follow-ups only for the active section.",
+    "For observation, reading, writing, and copying tasks, instruct the patient to use the on-screen camera or canvas controls when relevant.",
+    "If the patient asks to stop, call finish_questionnaire with status exited.",
+    "Call set_active_question before asking the active question if it has not already been set.",
+    "Call record_question_result only when the active section is complete enough to score.",
+    "Use numeric scores and never exceed the active section maximum score.",
+    "Include brief clinician notes explaining the score.",
+    "Include the exact response or behavior you relied on when available.",
+    "If media was required, mention whether the camera or canvas artifact was reviewed.",
+    "",
+    `Selected questionnaire: ${state.activeQuestionnaire?.title || ""}`,
+    `Questionnaire ID: ${state.activeQuestionnaire?.id || ""}`,
+    `Completed count: ${completedCount} of ${questions.length}`,
+    "Active section JSON:",
+    JSON.stringify({
+      questionId: question.id,
+      section: question.section,
+      question: question.question,
+      questionChinese: question.questionChinese,
+      scoringNotes: question.scoringNotes,
+      maxScore: question.maxScore,
+      capability: question.capability
+    })
+  ].join("\n");
 }
 
 function clampScore(score, maxScore) {
