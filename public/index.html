@@ -56,7 +56,23 @@
 
               <div class="call-controls">
                 <button class="primary" id="startButton" type="button">Start Questionnaire</button>
-                <button class="secondary mic-toggle" id="microphoneButton" type="button" disabled>Mute mic</button>
+                <button class="secondary mic-toggle" id="microphoneButton" type="button" disabled aria-label="Mute microphone" title="Mute microphone">
+                  <svg class="mic-icon mic-icon-on" aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path>
+                    <path d="M5 11a7 7 0 0 0 14 0"></path>
+                    <path d="M12 18v3"></path>
+                    <path d="M8 21h8"></path>
+                  </svg>
+                  <svg class="mic-icon mic-icon-off" aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M9 6v6a3 3 0 0 0 5 2.2"></path>
+                    <path d="M15 9.3V6a3 3 0 0 0-5.1-2.1"></path>
+                    <path d="M5 11a7 7 0 0 0 12 4.9"></path>
+                    <path d="M19 11a7 7 0 0 1-.6 2.8"></path>
+                    <path d="M12 18v3"></path>
+                    <path d="M8 21h8"></path>
+                    <path d="M4 4l16 16"></path>
+                  </svg>
+                </button>
                 <button class="danger" id="finishButton" type="button" disabled>Finish</button>
                 <button class="secondary" id="exitButton" type="button" disabled>Exit</button>
               </div>

@@ -207,6 +207,33 @@ main {
   color: #7a4a00;
 }
 
+.mic-toggle {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.mic-icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.mic-toggle .mic-icon-off,
+.mic-toggle.active .mic-icon-on {
+  display: none;
+}
+
+.mic-toggle.active .mic-icon-off {
+  display: block;
+}
+
 .call-layout {
   display: grid;
   grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);

@@ -531,7 +531,7 @@ function endRealtimeConnection() {
   state.localAudioStream = undefined;
   state.microphoneMuted = false;
   els.microphoneButton.disabled = true;
-  els.microphoneButton.textContent = "Mute mic";
+  updateMicrophoneButton(false);
   els.startButton.disabled = false;
   els.finishButton.disabled = true;
   els.exitButton.disabled = true;
@@ -848,7 +848,13 @@ function setMicrophoneMuted(muted) {
   for (const track of state.localAudioStream?.getAudioTracks() || []) {
     track.enabled = !muted;
   }
-  els.microphoneButton.textContent = muted ? "Unmute mic" : "Mute mic";
+  updateMicrophoneButton(muted);
+}
+
+function updateMicrophoneButton(muted) {
+  const label = muted ? "Unmute microphone" : "Mute microphone";
+  els.microphoneButton.setAttribute("aria-label", label);
+  els.microphoneButton.title = label;
   els.microphoneButton.classList.toggle("active", muted);
 }
 
