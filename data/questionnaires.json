@@ -11,13 +11,6 @@
     "record_audio_transcript": true,
     "separate_spoken_prompt_from_scoring_notes": true
   },
-  "materials_required": [
-    "blank paper",
-    "wristwatch",
-    "pencil",
-    "printed Close your eyes instruction",
-    "intersecting pentagons image"
-  ],
   "sections": [
     {
       "id": "orientation_time",
@@ -351,7 +344,6 @@
             "zh": "请用您的右手拿这张纸，把它折成对半，然后将纸放在地上。"
           },
           "pause_for_reply": true,
-          "requires_materials": ["blank paper"],
           "observable_steps": [
             {
               "id": "takes_paper_right_hand",
@@ -414,7 +406,6 @@
             "zh": "请您写一个完整的句子。"
           },
           "pause_for_reply": true,
-          "requires_materials": ["blank paper", "pencil"],
           "max_score": 1,
           "scoring": {
             "type": "manual_review",
@@ -445,7 +436,6 @@
             "description": "two intersecting pentagons"
           },
           "pause_for_reply": true,
-          "requires_materials": ["blank paper", "pencil"],
           "max_score": 1,
           "scoring": {
             "type": "manual_review",
