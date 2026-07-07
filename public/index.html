@@ -20,6 +20,7 @@
           <a href="/" data-route="patient">Patient call</a>
           <a href="/admin" data-route="admin">Admin editor</a>
           <a href="/report" data-route="report">Clinician report</a>
+          <a href="/log" data-route="log">Dialogue log</a>
         </nav>
         <div class="session-summary">
           <p class="label">Realtime status</p>
@@ -55,6 +56,7 @@
 
               <div class="call-controls">
                 <button class="primary" id="startButton" type="button">Start Questionnaire</button>
+                <button class="secondary mic-toggle" id="microphoneButton" type="button" disabled>Mute mic</button>
                 <button class="danger" id="finishButton" type="button" disabled>Finish</button>
                 <button class="secondary" id="exitButton" type="button" disabled>Exit</button>
               </div>
@@ -162,6 +164,18 @@
               <h3>Transcript</h3>
               <div class="transcript compact" id="reportTranscript"></div>
             </article>
+          </section>
+        </section>
+
+        <section class="view" id="logView" hidden>
+          <header class="page-header">
+            <div>
+              <p class="eyebrow">Session trace</p>
+              <h2>Dialogue log</h2>
+            </div>
+          </header>
+          <section class="log-panel">
+            <div class="transcript compact log-transcript" id="logTranscript"></div>
           </section>
         </section>
       </main>

@@ -17,7 +17,7 @@ loadEnvFile(resolve(rootDir, ".env.local"));
 const port = Number(process.env.PORT || "3000");
 const model = process.env.REALTIME_MODEL || "gpt-realtime-2.1-mini";
 const voice = process.env.REALTIME_VOICE || "marin";
-const transcriptionModel = process.env.REALTIME_TRANSCRIPTION_MODEL || "";
+const transcriptionModel = process.env.REALTIME_TRANSCRIPTION_MODEL || "gpt-4o-mini-transcribe";
 const apiKey = process.env.OPENAI_API_KEY;
 const safetyIdentifier = process.env.OPENAI_SAFETY_IDENTIFIER || "local-questionnaire-demo";
 const baseInstructions = readFileSync(promptPath, "utf8");
@@ -325,7 +325,7 @@ function serveStatic(req, res, pathname) {
     return;
   }
 
-  const routePath = pathname === "/" || pathname === "/admin" || pathname === "/report" ? "/index.html" : pathname;
+  const routePath = pathname === "/" || pathname === "/admin" || pathname === "/report" || pathname === "/log" ? "/index.html" : pathname;
   const safePath = normalize(decodeURIComponent(routePath)).replace(/^(\.\.[/\\])+/, "");
   const filePath = resolve(join(publicDir, safePath));
 

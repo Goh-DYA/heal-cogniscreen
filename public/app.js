@@ -1,13 +1,15 @@
 const routes = {
   "/": "patient",
   "/admin": "admin",
-  "/report": "report"
+  "/report": "report",
+  "/log": "log"
 };
 
 const els = {
   connectionStatus: document.querySelector("#connectionStatus"),
   questionnaireSelect: document.querySelector("#questionnaireSelect"),
   startButton: document.querySelector("#startButton"),
+  microphoneButton: document.querySelector("#microphoneButton"),
   finishButton: document.querySelector("#finishButton"),
   exitButton: document.querySelector("#exitButton"),
   reportButton: document.querySelector("#reportButton"),
@@ -40,6 +42,7 @@ const els = {
   reportStatus: document.querySelector("#reportStatus"),
   reportResponses: document.querySelector("#reportResponses"),
   reportTranscript: document.querySelector("#reportTranscript"),
+  logTranscript: document.querySelector("#logTranscript"),
   downloadReportButton: document.querySelector("#downloadReportButton")
 };
 
@@ -55,13 +58,17 @@ const state = {
   peerConnection: undefined,
   dataChannel: undefined,
   localAudioStream: undefined,
+  microphoneMuted: false,
   cameraStream: undefined,
   assistantMessage: undefined,
+  handledToolCalls: new Set(),
+  loggedInputTranscripts: new Set(),
   drawing: false,
   lastReportSummary: ""
 };
 
 els.startButton.addEventListener("click", startQuestionnaire);
+els.microphoneButton.addEventListener("click", toggleMicrophone);
 els.finishButton.addEventListener("click", () => finishQuestionnaire("completed", "Questionnaire manually finished."));
 els.exitButton.addEventListener("click", () => finishQuestionnaire("exited", "Questionnaire exited before all items were completed."));
 els.reportButton.addEventListener("click", () => navigate("/report"));
@@ -132,6 +139,8 @@ async function startQuestionnaire() {
 
     state.localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     state.peerConnection.addTrack(state.localAudioStream.getAudioTracks()[0], state.localAudioStream);
+    setMicrophoneMuted(false);
+    els.microphoneButton.disabled = false;
 
     const offer = await state.peerConnection.createOffer();
     await state.peerConnection.setLocalDescription(offer);
@@ -192,8 +201,12 @@ function handleRealtimeEvent(event) {
     state.assistantMessage = undefined;
   }
 
-  if (payload.type === "conversation.item.input_audio_transcription.completed") {
-    appendTranscript("user", payload.transcript || "");
+  if (payload.type === "conversation.item.input_audio_transcription.completed" || payload.type === "conversation.item.input_audio_transcription.segment") {
+    appendInputTranscript(payload.item_id || payload.item?.id || payload.event_id, payload.transcript || payload.text || "");
+  }
+
+  if (payload.type === "conversation.item.input_audio_transcription.failed") {
+    appendTranscript("system", "Could not transcribe patient audio for the log.");
   }
 
   if (payload.type === "response.output_item.done") {
@@ -210,9 +223,16 @@ function handleRealtimeEvent(event) {
 }
 
 function maybeHandleFunctionCall(item) {
-  if (!item || item.type !== "function_call") {
+  const isFunctionCall = item?.type === "function_call" || item?.type === "response.function_call_arguments.done";
+  if (!isFunctionCall) {
     return;
   }
+
+  const callKey = item.call_id || `${item.name}:${item.arguments || ""}`;
+  if (state.handledToolCalls.has(callKey)) {
+    return;
+  }
+  state.handledToolCalls.add(callKey);
 
   let args = {};
   try {
@@ -221,6 +241,7 @@ function maybeHandleFunctionCall(item) {
     console.error(error);
   }
 
+  appendTranscript("system", `Calling tool: ${formatToolName(item.name)}.`);
   const output = handleToolCall(item.name, args);
   if (item.call_id && state.dataChannel?.readyState === "open") {
     state.dataChannel.send(JSON.stringify({
@@ -231,13 +252,9 @@ function maybeHandleFunctionCall(item) {
         output: JSON.stringify(output)
       }
     }));
+    appendTranscript("system", `Tool complete: ${formatToolName(item.name)}.`);
     if (!output.finished) {
-      state.dataChannel.send(JSON.stringify({
-        type: "response.create",
-        response: {
-          modalities: ["text", "audio"]
-        }
-      }));
+      sendRealtimeResponse(output.continueInstruction || "Continue the questionnaire immediately.");
     }
   }
 }
@@ -248,17 +265,22 @@ function handleToolCall(name, args) {
     return {
       ok: true,
       activeQuestionId: state.activeQuestionId,
-      progress: progressSnapshot()
+      progress: progressSnapshot(),
+      continueInstruction: "The active question is set. Ask this question now."
     };
   }
 
   if (name === "record_question_result") {
     recordResponse(args);
+    const nextQuestion = getNextIncompleteQuestion();
     return {
       ok: true,
       recordedQuestionId: args.questionId,
-      nextQuestionId: getNextIncompleteQuestion()?.id || null,
-      progress: progressSnapshot()
+      nextQuestionId: nextQuestion?.id || null,
+      progress: progressSnapshot(),
+      continueInstruction: nextQuestion
+        ? `Move on immediately. Call set_active_question with questionId "${nextQuestion.id}", then ask that next question without waiting for the patient to prompt you.`
+        : "All questions are recorded. Call finish_questionnaire now with status completed."
     };
   }
 
@@ -449,6 +471,25 @@ function sendImageArtifact(dataUrl, message) {
   persistReport("");
 }
 
+function sendRealtimeResponse(instructions) {
+  if (!state.dataChannel || state.dataChannel.readyState !== "open") {
+    appendTranscript("system", "Realtime connection is not ready.");
+    return;
+  }
+
+  const response = {
+    output_modalities: ["audio"]
+  };
+  if (instructions) {
+    response.instructions = instructions;
+  }
+
+  state.dataChannel.send(JSON.stringify({
+    type: "response.create",
+    response
+  }));
+}
+
 function sendRealtimeContent(content) {
   if (!state.dataChannel || state.dataChannel.readyState !== "open") {
     appendTranscript("system", "Realtime connection is not ready.");
@@ -463,12 +504,7 @@ function sendRealtimeContent(content) {
       content
     }
   }));
-  state.dataChannel.send(JSON.stringify({
-    type: "response.create",
-    response: {
-      modalities: ["text", "audio"]
-    }
-  }));
+  sendRealtimeResponse();
 }
 
 function finishQuestionnaire(status, summary) {
@@ -493,6 +529,9 @@ function endRealtimeConnection() {
   state.dataChannel = undefined;
   state.peerConnection = undefined;
   state.localAudioStream = undefined;
+  state.microphoneMuted = false;
+  els.microphoneButton.disabled = true;
+  els.microphoneButton.textContent = "Mute mic";
   els.startButton.disabled = false;
   els.finishButton.disabled = true;
   els.exitButton.disabled = true;
@@ -619,6 +658,7 @@ function renderReport() {
   els.reportStatus.textContent = state.lastReportSummary || `${state.responses.size} of ${questions.length} questions recorded.`;
   els.reportResponses.innerHTML = "";
   els.reportTranscript.innerHTML = "";
+  renderLog();
 
   for (const question of questions) {
     const response = state.responses.get(question.id);
@@ -645,6 +685,23 @@ function renderReport() {
     item.className = `utterance ${entry.role}`;
     item.textContent = entry.text;
     els.reportTranscript.append(item);
+  }
+}
+
+function renderLog() {
+  if (!els.logTranscript) {
+    return;
+  }
+
+  els.logTranscript.innerHTML = "";
+  for (const entry of state.transcript) {
+    const item = document.createElement("div");
+    item.className = `utterance ${entry.role}`;
+    item.innerHTML = `
+      <span class="log-meta">${escapeHtml(entry.role)} ${escapeHtml(formatTime(entry.at))}</span>
+      <span>${escapeHtml(entry.text)}</span>
+    `;
+    els.logTranscript.append(item);
   }
 }
 
@@ -694,6 +751,7 @@ function restoreReport() {
       state.transcript = report.transcript || [];
       state.responses = new Map((report.responses || []).map((response) => [response.questionId, response]));
       renderQuestionnaire();
+      renderLog();
     }
   } catch (error) {
     console.error(error);
@@ -706,9 +764,26 @@ function resetSessionState() {
   state.transcript = [];
   state.mediaArtifacts = [];
   state.lastReportSummary = "";
+  state.handledToolCalls = new Set();
+  state.loggedInputTranscripts = new Set();
   els.transcript.innerHTML = "";
   els.activeQuestionTitle.textContent = "Not started";
   els.activeQuestionText.textContent = "Start the questionnaire when the patient is ready.";
+}
+
+function appendInputTranscript(id, text) {
+  const normalizedText = String(text || "").trim();
+  if (!normalizedText) {
+    return;
+  }
+
+  const key = id || normalizedText;
+  if (state.loggedInputTranscripts.has(key)) {
+    return;
+  }
+
+  state.loggedInputTranscripts.add(key);
+  appendTranscript("user", normalizedText);
 }
 
 function appendAssistantDelta(delta) {
@@ -726,6 +801,8 @@ function appendAssistantDelta(delta) {
     last.text = state.assistantMessage.textContent;
   }
   els.transcript.scrollTop = els.transcript.scrollHeight;
+  persistReport("");
+  renderLog();
 }
 
 function appendTranscript(role, text) {
@@ -736,6 +813,8 @@ function appendTranscript(role, text) {
   els.transcript.scrollTop = els.transcript.scrollHeight;
   state.transcript.push({ role, text, at: new Date().toISOString() });
   renderReport();
+  persistReport("");
+  renderLog();
   return item;
 }
 
@@ -753,10 +832,24 @@ function renderRoute() {
     link.classList.toggle("active", link.dataset.route === route);
   }
   renderReport();
+  renderLog();
 }
 
 function setConnectionStatus(value) {
   els.connectionStatus.textContent = value;
+}
+
+function toggleMicrophone() {
+  setMicrophoneMuted(!state.microphoneMuted);
+}
+
+function setMicrophoneMuted(muted) {
+  state.microphoneMuted = muted;
+  for (const track of state.localAudioStream?.getAudioTracks() || []) {
+    track.enabled = !muted;
+  }
+  els.microphoneButton.textContent = muted ? "Unmute mic" : "Mute mic";
+  els.microphoneButton.classList.toggle("active", muted);
 }
 
 function getQuestion(questionId) {
@@ -808,6 +901,21 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
   return escapeHtml(value).replace(/`/g, "&#096;");
+}
+
+function formatToolName(name) {
+  return String(name || "unknown").replace(/_/g, " ");
+}
+
+function formatTime(value) {
+  if (!value) {
+    return "";
+  }
+  return new Date(value).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
 }
 
 function slugify(value) {
