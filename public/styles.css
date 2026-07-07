@@ -195,6 +195,24 @@ main {
   color: var(--ink);
 }
 
+.icon-button {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .danger {
   border-color: var(--red);
   background: var(--red);

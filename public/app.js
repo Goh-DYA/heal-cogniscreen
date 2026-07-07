@@ -5,6 +5,8 @@ const routes = {
   "/log": "log"
 };
 
+const reportStorageKey = "heal-questionnaire-report";
+
 const els = {
   connectionStatus: document.querySelector("#connectionStatus"),
   questionnaireSelect: document.querySelector("#questionnaireSelect"),
@@ -12,6 +14,7 @@ const els = {
   microphoneButton: document.querySelector("#microphoneButton"),
   finishButton: document.querySelector("#finishButton"),
   exitButton: document.querySelector("#exitButton"),
+  resetProgressButton: document.querySelector("#resetProgressButton"),
   reportButton: document.querySelector("#reportButton"),
   activeQuestionTitle: document.querySelector("#activeQuestionTitle"),
   activeQuestionText: document.querySelector("#activeQuestionText"),
@@ -71,6 +74,7 @@ els.startButton.addEventListener("click", startQuestionnaire);
 els.microphoneButton.addEventListener("click", toggleMicrophone);
 els.finishButton.addEventListener("click", () => finishQuestionnaire("completed", "Questionnaire manually finished."));
 els.exitButton.addEventListener("click", () => finishQuestionnaire("exited", "Questionnaire exited before all items were completed."));
+els.resetProgressButton.addEventListener("click", resetProgress);
 els.reportButton.addEventListener("click", () => navigate("/report"));
 els.questionnaireSelect.addEventListener("change", selectQuestionnaire);
 els.cameraButton.addEventListener("click", startCamera);
@@ -734,11 +738,11 @@ function persistReport(summary) {
   if (summary) {
     state.lastReportSummary = summary;
   }
-  localStorage.setItem("heal-questionnaire-report", JSON.stringify(buildReport()));
+  localStorage.setItem(reportStorageKey, JSON.stringify(buildReport()));
 }
 
 function restoreReport() {
-  const raw = localStorage.getItem("heal-questionnaire-report");
+  const raw = localStorage.getItem(reportStorageKey);
   if (!raw) {
     return;
   }
@@ -758,11 +762,25 @@ function restoreReport() {
   }
 }
 
+function resetProgress() {
+  if (!window.confirm("Reset all saved questionnaire progress?")) {
+    return;
+  }
+
+  localStorage.removeItem(reportStorageKey);
+  endRealtimeConnection();
+  resetSessionState();
+  renderModality("");
+  renderQuestionnaire();
+  renderLog();
+}
+
 function resetSessionState() {
   state.activeQuestionId = undefined;
   state.responses = new Map();
   state.transcript = [];
   state.mediaArtifacts = [];
+  state.sessionStatus = "idle";
   state.lastReportSummary = "";
   state.handledToolCalls = new Set();
   state.loggedInputTranscripts = new Set();
