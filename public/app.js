@@ -33,6 +33,7 @@ const els = {
   copyingReference: document.querySelector("#copyingReference"),
   responseCanvas: document.querySelector("#responseCanvas"),
   readingBlock: document.querySelector("#readingBlock"),
+  adminQuestionnaireSelect: document.querySelector("#adminQuestionnaireSelect"),
   newQuestionnaireButton: document.querySelector("#newQuestionnaireButton"),
   saveQuestionnaireButton: document.querySelector("#saveQuestionnaireButton"),
   addQuestionButton: document.querySelector("#addQuestionButton"),
@@ -77,6 +78,7 @@ els.exitButton.addEventListener("click", () => finishQuestionnaire("exited", "Qu
 els.resetProgressButton.addEventListener("click", resetProgress);
 els.reportButton.addEventListener("click", () => navigate("/report"));
 els.questionnaireSelect.addEventListener("change", selectQuestionnaire);
+els.adminQuestionnaireSelect.addEventListener("change", selectEditorQuestionnaire);
 els.cameraButton.addEventListener("click", startCamera);
 els.snapshotButton.addEventListener("click", sendCameraSnapshot);
 els.clearCanvasButton.addEventListener("click", clearCanvas);
@@ -109,11 +111,22 @@ async function loadQuestionnaires() {
 
 function renderQuestionnaireSelect() {
   els.questionnaireSelect.innerHTML = "";
+  els.adminQuestionnaireSelect.innerHTML = "";
   for (const questionnaire of state.questionnaires) {
     const option = document.createElement("option");
     option.value = questionnaire.id;
     option.textContent = questionnaire.title;
     els.questionnaireSelect.append(option);
+
+    const adminOption = option.cloneNode(true);
+    els.adminQuestionnaireSelect.append(adminOption);
+  }
+
+  if (state.activeQuestionnaire) {
+    els.questionnaireSelect.value = state.activeQuestionnaire.id;
+  }
+  if (state.editorQuestionnaire) {
+    els.adminQuestionnaireSelect.value = state.editorQuestionnaire.id;
   }
 }
 
@@ -122,6 +135,12 @@ function selectQuestionnaire() {
   state.editorQuestionnaire = cloneQuestionnaire(state.activeQuestionnaire);
   resetSessionState();
   renderQuestionnaire();
+  renderEditor();
+}
+
+function selectEditorQuestionnaire() {
+  const questionnaire = state.questionnaires.find((item) => item.id === els.adminQuestionnaireSelect.value);
+  state.editorQuestionnaire = cloneQuestionnaire(questionnaire);
   renderEditor();
 }
 
@@ -265,26 +284,27 @@ function maybeHandleFunctionCall(item) {
 
 function handleToolCall(name, args) {
   if (name === "set_active_question") {
-    setActiveQuestion(args.questionId);
+    const activeResult = setActiveQuestionFromTool(args.questionId);
     return {
-      ok: true,
+      ok: activeResult.ok,
+      error: activeResult.error,
       activeQuestionId: state.activeQuestionId,
+      expectedQuestionId: activeResult.expectedQuestionId,
       progress: progressSnapshot(),
-      continueInstruction: "The active question is set. Ask this question now."
+      continueInstruction: activeResult.continueInstruction
     };
   }
 
   if (name === "record_question_result") {
-    recordResponse(args);
+    const result = recordResponse(args);
     const nextQuestion = getNextIncompleteQuestion();
     return {
-      ok: true,
-      recordedQuestionId: args.questionId,
+      ok: result.ok,
+      error: result.error,
+      recordedQuestionId: result.recordedQuestionId || null,
       nextQuestionId: nextQuestion?.id || null,
       progress: progressSnapshot(),
-      continueInstruction: nextQuestion
-        ? `Move on immediately. Call set_active_question with questionId "${nextQuestion.id}", then ask that next question without waiting for the patient to prompt you.`
-        : "All questions are recorded. Call finish_questionnaire now with status completed."
+      continueInstruction: result.continueInstruction
     };
   }
 
@@ -304,7 +324,29 @@ function handleToolCall(name, args) {
 function recordResponse(args) {
   const question = getQuestion(args.questionId);
   if (!question) {
-    return;
+    return {
+      ok: false,
+      error: `Unknown questionId "${args.questionId}".`,
+      continueInstruction: getSequenceCorrectionInstruction()
+    };
+  }
+
+  const currentQuestion = getNextIncompleteQuestion();
+  if (!currentQuestion) {
+    return {
+      ok: false,
+      error: "All questions have already been recorded.",
+      continueInstruction: "All questions are recorded. Call finish_questionnaire now with status completed."
+    };
+  }
+
+  if (question.id !== currentQuestion.id) {
+    setActiveQuestion(currentQuestion.id);
+    return {
+      ok: false,
+      error: `Question "${question.id}" is not the active unanswered question.`,
+      continueInstruction: getSequenceCorrectionInstruction()
+    };
   }
 
   const score = clampScore(Number(args.score), question.maxScore);
@@ -326,6 +368,13 @@ function recordResponse(args) {
   }
   renderQuestionnaire();
   persistReport(args.summary || "");
+  return {
+    ok: true,
+    recordedQuestionId: question.id,
+    continueInstruction: nextQuestion
+      ? `Move on immediately to questionId "${nextQuestion.id}". Ask only that question now and do not repeat any completed question.`
+      : "All questions are recorded. Call finish_questionnaire now with status completed."
+  };
 }
 
 function setActiveQuestion(questionId) {
@@ -339,6 +388,46 @@ function setActiveQuestion(questionId) {
   els.activeQuestionText.textContent = question.question;
   renderModality(question.capability);
   renderQuestionnaire();
+}
+
+function setActiveQuestionFromTool(questionId) {
+  const expectedQuestion = getNextIncompleteQuestion();
+  if (!expectedQuestion) {
+    return {
+      ok: false,
+      error: "All questions have already been recorded.",
+      expectedQuestionId: null,
+      continueInstruction: "All questions are recorded. Call finish_questionnaire now with status completed."
+    };
+  }
+
+  const question = getQuestion(questionId);
+  if (!question) {
+    setActiveQuestion(expectedQuestion.id);
+    return {
+      ok: false,
+      error: `Unknown questionId "${questionId}".`,
+      expectedQuestionId: expectedQuestion.id,
+      continueInstruction: getSequenceCorrectionInstruction()
+    };
+  }
+
+  if (question.id !== expectedQuestion.id) {
+    setActiveQuestion(expectedQuestion.id);
+    return {
+      ok: false,
+      error: `Question "${question.id}" is out of sequence or already complete.`,
+      expectedQuestionId: expectedQuestion.id,
+      continueInstruction: getSequenceCorrectionInstruction()
+    };
+  }
+
+  setActiveQuestion(question.id);
+  return {
+    ok: true,
+    expectedQuestionId: question.id,
+    continueInstruction: `The active question is "${question.id}". Ask this question now and do not ask any other question until it is recorded.`
+  };
 }
 
 function renderQuestionnaire() {
@@ -370,7 +459,11 @@ function renderQuestionnaire() {
       </div>
       <span class="score-pill">${response ? `${response.score}/${question.maxScore}` : "-"}</span>
     `;
-    item.addEventListener("click", () => setActiveQuestion(question.id));
+    item.addEventListener("click", () => {
+      if (state.sessionStatus !== "live") {
+        setActiveQuestion(question.id);
+      }
+    });
     els.questionList.append(item);
   }
 
@@ -550,11 +643,13 @@ function createNewQuestionnaire() {
     language: "English",
     questions: []
   };
+  els.adminQuestionnaireSelect.value = "";
   renderEditor();
 }
 
 function renderEditor() {
   const questionnaire = state.editorQuestionnaire;
+  els.adminQuestionnaireSelect.value = questionnaire?.id || "";
   els.editorTitle.value = questionnaire?.title || "";
   els.editorId.value = questionnaire?.id || "";
   els.editorDescription.value = questionnaire?.description || "";
@@ -599,6 +694,8 @@ function createQuestionEditor(question, index) {
       <input data-field="maxScore" type="number" min="0" step="1" value="${escapeAttribute(question.maxScore)}">
     </label>
     <div class="row-actions">
+      <button class="secondary" data-move="up" type="button" ${index === 0 ? "disabled" : ""}>Move up</button>
+      <button class="secondary" data-move="down" type="button" ${index === state.editorQuestionnaire.questions.length - 1 ? "disabled" : ""}>Move down</button>
       <button class="danger" data-remove type="button">Remove</button>
     </div>
   `;
@@ -614,7 +711,23 @@ function createQuestionEditor(question, index) {
     state.editorQuestionnaire.questions.splice(index, 1);
     renderEditor();
   });
+  for (const button of wrapper.querySelectorAll("[data-move]")) {
+    button.addEventListener("click", () => {
+      moveQuestion(index, button.dataset.move);
+    });
+  }
   return wrapper;
+}
+
+function moveQuestion(index, direction) {
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= state.editorQuestionnaire.questions.length) {
+    return;
+  }
+
+  const [question] = state.editorQuestionnaire.questions.splice(index, 1);
+  state.editorQuestionnaire.questions.splice(targetIndex, 0, question);
+  renderEditor();
 }
 
 function addQuestionEditorRow() {
@@ -882,6 +995,15 @@ function getQuestion(questionId) {
 
 function getNextIncompleteQuestion() {
   return state.activeQuestionnaire?.questions.find((question) => !state.responses.has(question.id));
+}
+
+function getSequenceCorrectionInstruction() {
+  const nextQuestion = getNextIncompleteQuestion();
+  if (!nextQuestion) {
+    return "All questions are recorded. Call finish_questionnaire now with status completed.";
+  }
+
+  return `The next required question is questionId "${nextQuestion.id}". Ask only that question now, and do not repeat any completed question.`;
 }
 
 function progressSnapshot() {

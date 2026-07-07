@@ -546,6 +546,8 @@ canvas {
 .question-editor .row-actions {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
 }
 
