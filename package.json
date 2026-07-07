@@ -1,0 +1,14 @@
+{
+  "name": "heal-mmse-realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Realtime voice questionnaire platform for MMSE administration",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

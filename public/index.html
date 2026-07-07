@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Heal Realtime Questionnaire</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">H</div>
+          <div>
+            <p class="eyebrow">Heal</p>
+            <h1>Questionnaire</h1>
+          </div>
+        </div>
+        <nav>
+          <a href="/" data-route="patient">Patient call</a>
+          <a href="/admin" data-route="admin">Admin editor</a>
+          <a href="/report" data-route="report">Clinician report</a>
+        </nav>
+        <div class="session-summary">
+          <p class="label">Realtime status</p>
+          <strong id="connectionStatus">Idle</strong>
+        </div>
+      </aside>
+
+      <main>
+        <section class="view" id="patientView">
+          <header class="page-header">
+            <div>
+              <p class="eyebrow">Patient workflow</p>
+              <h2>MMSE telehealth administration</h2>
+            </div>
+            <div class="header-actions">
+              <select id="questionnaireSelect" aria-label="Questionnaire"></select>
+              <button class="secondary" id="reportButton" type="button">Report</button>
+            </div>
+          </header>
+
+          <section class="call-layout">
+            <div class="call-stage">
+              <div class="avatar-panel">
+                <div class="avatar-portrait" aria-hidden="true">
+                  <span>AI</span>
+                </div>
+                <div>
+                  <p class="label">Current question</p>
+                  <h3 id="activeQuestionTitle">Not started</h3>
+                  <p id="activeQuestionText">Start the questionnaire when the patient is ready.</p>
+                </div>
+              </div>
+
+              <div class="call-controls">
+                <button class="primary" id="startButton" type="button">Start Questionnaire</button>
+                <button class="danger" id="finishButton" type="button" disabled>Finish</button>
+                <button class="secondary" id="exitButton" type="button" disabled>Exit</button>
+              </div>
+
+              <div class="transcript" id="transcript" aria-live="polite"></div>
+            </div>
+
+            <div class="task-panel">
+              <div class="progress-block">
+                <div class="progress-row">
+                  <span id="progressText">0 of 0 complete</span>
+                  <span id="scoreText">0 / 0</span>
+                </div>
+                <div class="progress-track"><div id="progressFill"></div></div>
+              </div>
+
+              <div class="modality-block" id="cameraBlock" hidden>
+                <div class="block-header">
+                  <h3>Observation</h3>
+                  <button class="secondary" id="cameraButton" type="button">Start camera</button>
+                </div>
+                <video id="cameraPreview" autoplay muted playsinline></video>
+                <button class="secondary" id="snapshotButton" type="button" disabled>Send snapshot</button>
+              </div>
+
+              <div class="modality-block" id="canvasBlock" hidden>
+                <div class="block-header">
+                  <h3>Canvas</h3>
+                  <div>
+                    <button class="secondary" id="clearCanvasButton" type="button">Clear</button>
+                    <button class="secondary" id="sendCanvasButton" type="button">Send canvas</button>
+                  </div>
+                </div>
+                <div class="copying-reference" id="copyingReference" hidden>
+                  <img src="/mmse_picture_copying.png" alt="Intersecting pentagons to copy">
+                </div>
+                <canvas id="responseCanvas" width="720" height="420"></canvas>
+              </div>
+
+              <div class="modality-block" id="readingBlock" hidden>
+                <h3>Reading prompt</h3>
+                <p class="reading-card">Close your eyes.</p>
+              </div>
+
+              <ol class="question-list" id="questionList"></ol>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="adminView" hidden>
+          <header class="page-header">
+            <div>
+              <p class="eyebrow">Administration</p>
+              <h2>Create or edit questionnaire</h2>
+            </div>
+            <div class="header-actions">
+              <button class="secondary" id="newQuestionnaireButton" type="button">New</button>
+              <button class="primary" id="saveQuestionnaireButton" type="button">Save</button>
+            </div>
+          </header>
+
+          <form class="editor-grid" id="questionnaireForm">
+            <label>
+              Title
+              <input id="editorTitle" required>
+            </label>
+            <label>
+              ID
+              <input id="editorId" required>
+            </label>
+            <label>
+              Description
+              <textarea id="editorDescription" rows="3"></textarea>
+            </label>
+            <label>
+              Language
+              <input id="editorLanguage">
+            </label>
+          </form>
+          <div class="editor-toolbar">
+            <button class="secondary" id="addQuestionButton" type="button">Add question</button>
+          </div>
+          <div class="question-editor-list" id="questionEditorList"></div>
+        </section>
+
+        <section class="view" id="reportView" hidden>
+          <header class="page-header">
+            <div>
+              <p class="eyebrow">Clinician view</p>
+              <h2>Questionnaire report</h2>
+            </div>
+            <button class="secondary" id="downloadReportButton" type="button">Download JSON</button>
+          </header>
+          <section class="report-grid">
+            <article class="report-total">
+              <p class="label">Total score</p>
+              <strong id="reportTotal">0 / 0</strong>
+              <p id="reportStatus">No completed questionnaire yet.</p>
+            </article>
+            <article>
+              <h3>Responses</h3>
+              <div id="reportResponses"></div>
+            </article>
+            <article>
+              <h3>Transcript</h3>
+              <div class="transcript compact" id="reportTranscript"></div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
