@@ -29,6 +29,8 @@
       </aside>
 
       <main>
+        <p class="app-status" id="appStatus" aria-live="polite"></p>
+
         <section class="view" id="patientView">
           <header class="page-header">
             <div>
@@ -62,7 +64,7 @@
               </div>
 
               <div class="call-controls">
-                <button class="primary" id="startButton" type="button">Start Questionnaire</button>
+                <button class="primary" id="startButton" type="button" title="Start the voice questionnaire session">Start Questionnaire</button>
                 <button class="secondary mic-toggle" id="microphoneButton" type="button" disabled aria-label="Mute microphone" title="Mute microphone">
                   <svg class="mic-icon mic-icon-on" aria-hidden="true" viewBox="0 0 24 24">
                     <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path>
@@ -80,8 +82,8 @@
                     <path d="M4 4l16 16"></path>
                   </svg>
                 </button>
-                <button class="danger" id="finishButton" type="button" disabled>Finish</button>
-                <button class="secondary" id="exitButton" type="button" disabled>Exit</button>
+                <button class="danger" id="finishButton" type="button" disabled title="Finish and open the clinician report">Finish</button>
+                <button class="secondary" id="exitButton" type="button" disabled title="Exit early and open the clinician report">Exit</button>
               </div>
 
               <div class="transcript" id="transcript" aria-live="polite"></div>
@@ -99,28 +101,35 @@
               <div class="modality-block" id="cameraBlock" hidden>
                 <div class="block-header">
                   <h3>Observation</h3>
-                  <button class="secondary" id="cameraButton" type="button">Start camera</button>
+                  <button class="secondary" id="cameraButton" type="button" aria-describedby="cameraHelp" title="Turn the camera on or off">Start camera</button>
                 </div>
+                <p class="task-help" id="cameraHelp">Start the camera, position the item or action in view, then send a snapshot for the assistant to score.</p>
                 <video id="cameraPreview" autoplay muted playsinline></video>
-                <button class="secondary" id="snapshotButton" type="button" disabled>Send snapshot</button>
+                <div class="task-actions">
+                  <button class="secondary" id="snapshotButton" type="button" disabled aria-describedby="cameraStatus" title="Send the current camera frame for scoring">Send snapshot</button>
+                  <span class="task-status" id="cameraStatus" aria-live="polite">Camera is off.</span>
+                </div>
               </div>
 
               <div class="modality-block" id="canvasBlock" hidden>
                 <div class="block-header">
                   <h3>Canvas</h3>
                   <div>
-                    <button class="secondary" id="clearCanvasButton" type="button">Clear</button>
-                    <button class="secondary" id="sendCanvasButton" type="button">Send canvas</button>
+                    <button class="secondary" id="clearCanvasButton" type="button" aria-describedby="canvasHelp" title="Clear the canvas and start again">Clear</button>
+                    <button class="secondary" id="sendCanvasButton" type="button" aria-describedby="canvasStatus" title="Send the canvas for scoring">Send canvas</button>
                   </div>
                 </div>
+                <p class="task-help" id="canvasHelp">Use the canvas to write or draw the response. Clear it to start over, then send it when ready.</p>
                 <div class="copying-reference" id="copyingReference" hidden>
                   <img src="/mmse_picture_copying.png" alt="Intersecting pentagons to copy">
                 </div>
                 <canvas id="responseCanvas" width="720" height="420"></canvas>
+                <p class="task-status" id="canvasStatus" aria-live="polite">Canvas is ready.</p>
               </div>
 
               <div class="modality-block" id="readingBlock" hidden>
                 <h3>Reading prompt</h3>
+                <p class="task-help" id="readingHelp">Ask the patient to read the prompt and do what it says. Use the camera if the assistant needs visual confirmation.</p>
                 <p class="reading-card">Close your eyes.</p>
               </div>
 
@@ -137,8 +146,8 @@
             </div>
             <div class="header-actions">
               <select id="adminQuestionnaireSelect" aria-label="Questionnaire to edit"></select>
-              <button class="secondary" id="newQuestionnaireButton" type="button">New</button>
-              <button class="primary" id="saveQuestionnaireButton" type="button">Save</button>
+              <button class="secondary" id="newQuestionnaireButton" type="button" title="Create a new local questionnaire">New</button>
+              <button class="primary" id="saveQuestionnaireButton" type="button" title="Save the current questionnaire locally">Save</button>
             </div>
           </header>
 
@@ -161,7 +170,7 @@
             </label>
           </form>
           <div class="editor-toolbar">
-            <button class="secondary" id="addQuestionButton" type="button">Add question</button>
+            <button class="secondary" id="addQuestionButton" type="button" title="Add a question row to the editor">Add question</button>
           </div>
           <div class="question-editor-list" id="questionEditorList"></div>
         </section>
@@ -172,7 +181,7 @@
               <p class="eyebrow">Clinician view</p>
               <h2>Questionnaire report</h2>
             </div>
-            <button class="secondary" id="downloadReportButton" type="button">Download JSON</button>
+            <button class="secondary" id="downloadReportButton" type="button" title="Download the current report as JSON">Download JSON</button>
           </header>
           <section class="report-grid">
             <article class="report-total">

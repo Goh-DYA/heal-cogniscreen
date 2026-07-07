@@ -14,6 +14,7 @@ const completionFarewellInstruction = [
 ].join(" ");
 
 const els = {
+  appStatus: document.querySelector("#appStatus"),
   connectionStatus: document.querySelector("#connectionStatus"),
   questionnaireSelect: document.querySelector("#questionnaireSelect"),
   startButton: document.querySelector("#startButton"),
@@ -33,9 +34,11 @@ const els = {
   cameraButton: document.querySelector("#cameraButton"),
   cameraPreview: document.querySelector("#cameraPreview"),
   snapshotButton: document.querySelector("#snapshotButton"),
+  cameraStatus: document.querySelector("#cameraStatus"),
   canvasBlock: document.querySelector("#canvasBlock"),
   clearCanvasButton: document.querySelector("#clearCanvasButton"),
   sendCanvasButton: document.querySelector("#sendCanvasButton"),
+  canvasStatus: document.querySelector("#canvasStatus"),
   copyingReference: document.querySelector("#copyingReference"),
   responseCanvas: document.querySelector("#responseCanvas"),
   readingBlock: document.querySelector("#readingBlock"),
@@ -79,10 +82,19 @@ const state = {
 
 els.startButton.addEventListener("click", startQuestionnaire);
 els.microphoneButton.addEventListener("click", toggleMicrophone);
-els.finishButton.addEventListener("click", () => finishQuestionnaire("completed", "Questionnaire manually finished."));
-els.exitButton.addEventListener("click", () => finishQuestionnaire("exited", "Questionnaire exited before all items were completed."));
+els.finishButton.addEventListener("click", () => {
+  setAppStatus("Finishing questionnaire...");
+  finishQuestionnaire("completed", "Questionnaire manually finished.");
+});
+els.exitButton.addEventListener("click", () => {
+  setAppStatus("Exiting questionnaire...");
+  finishQuestionnaire("exited", "Questionnaire exited before all items were completed.");
+});
 els.resetProgressButton.addEventListener("click", resetProgress);
-els.reportButton.addEventListener("click", () => navigate("/report"));
+els.reportButton.addEventListener("click", () => {
+  setAppStatus("Opening clinician report.");
+  navigate("/report");
+});
 els.questionnaireSelect.addEventListener("change", selectQuestionnaire);
 els.adminQuestionnaireSelect.addEventListener("change", selectEditorQuestionnaire);
 els.cameraButton.addEventListener("click", startCamera);
@@ -140,6 +152,7 @@ function selectQuestionnaire() {
   state.activeQuestionnaire = state.questionnaires.find((item) => item.id === els.questionnaireSelect.value);
   state.editorQuestionnaire = cloneQuestionnaire(state.activeQuestionnaire);
   resetSessionState();
+  setAppStatus(`Selected ${state.activeQuestionnaire?.title || "questionnaire"}.`);
   renderQuestionnaire();
   renderEditor();
 }
@@ -147,11 +160,13 @@ function selectQuestionnaire() {
 function selectEditorQuestionnaire() {
   const questionnaire = state.questionnaires.find((item) => item.id === els.adminQuestionnaireSelect.value);
   state.editorQuestionnaire = cloneQuestionnaire(questionnaire);
+  setAppStatus(`Editing ${state.editorQuestionnaire?.title || "questionnaire"}.`);
   renderEditor();
 }
 
 async function startQuestionnaire() {
   setConnectionStatus("Connecting");
+  setAppStatus("Starting questionnaire session...");
   els.startButton.disabled = true;
 
   try {
@@ -194,9 +209,11 @@ async function startQuestionnaire() {
     els.exitButton.disabled = false;
     appendTranscript("system", "Call connected. The assistant will administer one item at a time.");
     setConnectionStatus("Live");
+    setAppStatus("Questionnaire session is live.");
   } catch (error) {
     console.error(error);
     appendTranscript("system", "Could not start the call. Check microphone permission and server configuration.");
+    setAppStatus("Could not start the call. Check microphone permission and server configuration.");
     endRealtimeConnection();
   }
 }
@@ -368,6 +385,7 @@ function recordResponse(args) {
   });
 
   appendTranscript("system", `Recorded ${question.section}: ${score} / ${question.maxScore}.`);
+  setAppStatus(`Recorded ${question.section}.`);
   const nextQuestion = getNextIncompleteQuestion();
   if (nextQuestion) {
     setActiveQuestion(nextQuestion.id);
@@ -393,6 +411,7 @@ function setActiveQuestion(questionId) {
   els.activeQuestionTitle.textContent = question.section;
   els.activeQuestionText.textContent = question.question;
   renderModality(question.capability);
+  setAppStatus(`Active task: ${question.section}.`);
   renderQuestionnaire();
   updateRealtimeSessionInstructions(question);
 }
@@ -464,10 +483,22 @@ function renderQuestionnaire() {
       </div>
       <span class="score-pill">${response ? `${response.score}/${question.maxScore}` : "-"}</span>
     `;
+    if (state.sessionStatus !== "live") {
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+      item.setAttribute("aria-label", `Select ${question.section}`);
+    }
     item.addEventListener("click", () => {
       if (state.sessionStatus !== "live") {
         setActiveQuestion(question.id);
       }
+    });
+    item.addEventListener("keydown", (event) => {
+      if (state.sessionStatus === "live" || !["Enter", " "].includes(event.key)) {
+        return;
+      }
+      event.preventDefault();
+      setActiveQuestion(question.id);
     });
     els.questionList.append(item);
   }
@@ -480,6 +511,7 @@ function renderModality(capability) {
   els.canvasBlock.hidden = !["writing", "copying"].includes(capability);
   els.readingBlock.hidden = capability !== "reading";
   els.copyingReference.hidden = capability !== "copying";
+  resetTaskFeedback(capability);
 }
 
 async function startCamera() {
@@ -488,10 +520,26 @@ async function startCamera() {
     return;
   }
 
-  state.cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-  els.cameraPreview.srcObject = state.cameraStream;
-  els.cameraButton.textContent = "Stop camera";
-  els.snapshotButton.disabled = false;
+  setCameraStatus("Requesting camera permission...");
+  els.cameraButton.disabled = true;
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera access is not supported by this browser.");
+    }
+
+    state.cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    els.cameraPreview.srcObject = state.cameraStream;
+    els.cameraButton.textContent = "Stop camera";
+    els.cameraButton.title = "Turn the camera off";
+    els.snapshotButton.disabled = false;
+    setCameraStatus("Camera on. Send a snapshot when the item or action is visible.");
+  } catch (error) {
+    console.error(error);
+    setCameraStatus("Could not start camera. Allow camera access, then try again.");
+    appendTranscript("system", "Could not start camera. Allow camera access, then try again.");
+  } finally {
+    els.cameraButton.disabled = false;
+  }
 }
 
 function stopCamera() {
@@ -503,11 +551,14 @@ function stopCamera() {
   state.cameraStream = undefined;
   els.cameraPreview.srcObject = undefined;
   els.cameraButton.textContent = "Start camera";
+  els.cameraButton.title = "Turn the camera on";
   els.snapshotButton.disabled = true;
+  setCameraStatus("Camera is off.");
 }
 
 function sendCameraSnapshot() {
   if (!state.cameraStream) {
+    setCameraStatus("Start the camera before sending a snapshot.");
     return;
   }
 
@@ -516,6 +567,7 @@ function sendCameraSnapshot() {
   canvas.height = els.cameraPreview.videoHeight || 480;
   canvas.getContext("2d").drawImage(els.cameraPreview, 0, 0, canvas.width, canvas.height);
   sendImageArtifact(canvas.toDataURL("image/jpeg", 0.88), "Camera snapshot submitted for observation.");
+  setCameraStatus("Snapshot sent for scoring.");
 }
 
 function setupCanvas() {
@@ -552,10 +604,12 @@ function clearCanvas() {
   const context = els.responseCanvas.getContext("2d");
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, els.responseCanvas.width, els.responseCanvas.height);
+  setCanvasStatus("Canvas cleared. Write or draw the response when ready.");
 }
 
 function sendCanvas() {
   sendImageArtifact(els.responseCanvas.toDataURL("image/png"), "Canvas response submitted for scoring.");
+  setCanvasStatus("Canvas sent for scoring.");
 }
 
 function sendImageArtifact(dataUrl, message) {
@@ -566,6 +620,7 @@ function sendImageArtifact(dataUrl, message) {
     createdAt: new Date().toISOString()
   });
   appendTranscript("user", message);
+  setAppStatus(message);
   sendRealtimeContent([
     { type: "input_text", text: `${message} Please evaluate it for the active question.` },
     { type: "input_image", image_url: dataUrl }
@@ -660,6 +715,7 @@ function createNewQuestionnaire() {
     questions: []
   };
   els.adminQuestionnaireSelect.value = "";
+  setAppStatus("New questionnaire draft created.");
   renderEditor();
 }
 
@@ -756,31 +812,46 @@ function addQuestionEditorRow() {
     maxScore: 1,
     capability: "voice"
   });
+  setAppStatus("Question row added.");
   renderEditor();
 }
 
 async function saveQuestionnaire() {
-  state.editorQuestionnaire.title = els.editorTitle.value.trim();
-  state.editorQuestionnaire.id = slugify(els.editorId.value.trim() || state.editorQuestionnaire.title);
-  state.editorQuestionnaire.description = els.editorDescription.value.trim();
-  state.editorQuestionnaire.language = els.editorLanguage.value.trim();
-  const savedId = state.editorQuestionnaire.id;
+  const originalLabel = els.saveQuestionnaireButton.textContent;
+  els.saveQuestionnaireButton.disabled = true;
+  els.saveQuestionnaireButton.textContent = "Saving...";
+  setAppStatus("Saving questionnaire...");
+  try {
+    state.editorQuestionnaire.title = els.editorTitle.value.trim();
+    state.editorQuestionnaire.id = slugify(els.editorId.value.trim() || state.editorQuestionnaire.title);
+    state.editorQuestionnaire.description = els.editorDescription.value.trim();
+    state.editorQuestionnaire.language = els.editorLanguage.value.trim();
+    const savedId = state.editorQuestionnaire.id;
 
-  const response = await fetch(`/api/questionnaires/${encodeURIComponent(state.editorQuestionnaire.id)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(state.editorQuestionnaire)
-  });
+    const response = await fetch(`/api/questionnaires/${encodeURIComponent(state.editorQuestionnaire.id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state.editorQuestionnaire)
+    });
 
-  if (!response.ok) {
-    appendTranscript("system", "Could not save questionnaire.");
-    return;
+    if (!response.ok) {
+      appendTranscript("system", "Could not save questionnaire.");
+      setAppStatus("Could not save questionnaire.");
+      return;
+    }
+
+    await loadQuestionnaires();
+    els.questionnaireSelect.value = savedId;
+    selectQuestionnaire();
+    setAppStatus("Questionnaire saved.");
+    navigate("/");
+  } catch (error) {
+    console.error(error);
+    setAppStatus("Could not save questionnaire.");
+  } finally {
+    els.saveQuestionnaireButton.disabled = false;
+    els.saveQuestionnaireButton.textContent = originalLabel;
   }
-
-  await loadQuestionnaires();
-  els.questionnaireSelect.value = savedId;
-  selectQuestionnaire();
-  navigate("/");
 }
 
 function renderReport() {
@@ -846,6 +917,7 @@ function downloadReport() {
   anchor.download = `questionnaire-report-${new Date().toISOString().slice(0, 10)}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
+  setAppStatus("Report JSON downloaded.");
 }
 
 function buildReport() {
@@ -893,6 +965,7 @@ function restoreReport() {
 
 function resetProgress() {
   if (!window.confirm("Reset all saved questionnaire progress?")) {
+    setAppStatus("Reset cancelled.");
     return;
   }
 
@@ -902,6 +975,7 @@ function resetProgress() {
   renderModality("");
   renderQuestionnaire();
   renderLog();
+  setAppStatus("Progress reset.");
 }
 
 function resetSessionState() {
@@ -986,8 +1060,14 @@ function setConnectionStatus(value) {
   els.connectionStatus.textContent = value;
 }
 
+function setAppStatus(value) {
+  els.appStatus.textContent = value;
+}
+
 function toggleMicrophone() {
-  setMicrophoneMuted(!state.microphoneMuted);
+  const muted = !state.microphoneMuted;
+  setMicrophoneMuted(muted);
+  setAppStatus(muted ? "Microphone muted." : "Microphone on.");
 }
 
 function setMicrophoneMuted(muted) {
@@ -1003,6 +1083,23 @@ function updateMicrophoneButton(muted) {
   els.microphoneButton.setAttribute("aria-label", label);
   els.microphoneButton.title = label;
   els.microphoneButton.classList.toggle("active", muted);
+}
+
+function resetTaskFeedback(capability) {
+  if (capability === "camera" || capability === "reading") {
+    setCameraStatus(state.cameraStream ? "Camera on. Send a snapshot when ready." : "Camera is off.");
+  }
+  if (capability === "writing" || capability === "copying") {
+    setCanvasStatus("Canvas is ready.");
+  }
+}
+
+function setCameraStatus(value) {
+  els.cameraStatus.textContent = value;
+}
+
+function setCanvasStatus(value) {
+  els.canvasStatus.textContent = value;
 }
 
 function getQuestion(questionId) {

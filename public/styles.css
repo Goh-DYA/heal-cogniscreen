@@ -45,11 +45,33 @@ button {
   padding: 0 14px;
   cursor: pointer;
   font-weight: 700;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+button:not(:disabled):hover,
+select:hover,
+input:hover,
+textarea:hover {
+  border-color: #a9b7c6;
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+nav a:focus-visible,
+.question-card:focus-visible {
+  outline: 3px solid rgba(31, 111, 235, 0.34);
+  outline-offset: 3px;
 }
 
 input,
@@ -139,7 +161,8 @@ nav a {
 }
 
 nav a.active,
-nav a:hover {
+nav a:hover,
+nav a:focus-visible {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
@@ -158,6 +181,15 @@ nav a:hover {
 main {
   min-width: 0;
   padding: 24px;
+}
+
+.app-status {
+  min-height: 24px;
+  margin: 0 auto 14px;
+  max-width: 1320px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .view {
@@ -190,9 +222,17 @@ main {
   color: #fff;
 }
 
+.primary:not(:disabled):hover {
+  background: #185cc5;
+}
+
 .secondary {
   background: #fff;
   color: var(--ink);
+}
+
+.secondary:not(:disabled):hover {
+  background: #f8fbfd;
 }
 
 .icon-button {
@@ -217,6 +257,10 @@ main {
   border-color: var(--red);
   background: var(--red);
   color: #fff;
+}
+
+.danger:not(:disabled):hover {
+  background: #a92727;
 }
 
 .mic-toggle.active {
@@ -410,6 +454,26 @@ main {
   font-size: 1rem;
 }
 
+.task-help {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.task-status {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
 video,
 canvas,
 .copying-reference {
@@ -466,6 +530,15 @@ canvas {
   gap: 10px;
   padding: 12px;
   box-shadow: none;
+}
+
+.question-card[role="button"] {
+  cursor: pointer;
+}
+
+.question-card[role="button"]:hover {
+  border-color: #a9b7c6;
+  background: #f8fbfd;
 }
 
 .question-card.active {
