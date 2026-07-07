@@ -9,8 +9,9 @@ const reportStorageKey = "heal-questionnaire-report";
 const activeSectionReinforcement = "Use only the active section in the current session instructions; do not ask or score any other section.";
 const completionFarewellInstruction = [
   "All questions are recorded.",
-  "Before calling finish_questionnaire, thank the patient warmly for being cooperative, offer brief encouragement, and say goodbye.",
-  "After speaking that closing message, call finish_questionnaire with status completed."
+  "Thank the patient warmly for being cooperative, offer brief encouragement, and say goodbye.",
+  "Tell the patient they may end the call using the on-screen End call button.",
+  "Do not call any tool after the farewell."
 ].join(" ");
 
 const els = {
@@ -20,7 +21,6 @@ const els = {
   startButton: document.querySelector("#startButton"),
   microphoneButton: document.querySelector("#microphoneButton"),
   finishButton: document.querySelector("#finishButton"),
-  exitButton: document.querySelector("#exitButton"),
   resetProgressButton: document.querySelector("#resetProgressButton"),
   reportButton: document.querySelector("#reportButton"),
   activeQuestionTitle: document.querySelector("#activeQuestionTitle"),
@@ -83,12 +83,8 @@ const state = {
 els.startButton.addEventListener("click", startQuestionnaire);
 els.microphoneButton.addEventListener("click", toggleMicrophone);
 els.finishButton.addEventListener("click", () => {
-  setAppStatus("Finishing questionnaire...");
+  setAppStatus("Ending call...");
   finishQuestionnaire("completed", "Questionnaire manually finished.");
-});
-els.exitButton.addEventListener("click", () => {
-  setAppStatus("Exiting questionnaire...");
-  finishQuestionnaire("exited", "Questionnaire exited before all items were completed.");
 });
 els.resetProgressButton.addEventListener("click", resetProgress);
 els.reportButton.addEventListener("click", () => {
@@ -206,7 +202,6 @@ async function startQuestionnaire() {
 
     state.sessionStatus = "live";
     els.finishButton.disabled = false;
-    els.exitButton.disabled = false;
     appendTranscript("system", "Call connected. The assistant will administer one item at a time.");
     setConnectionStatus("Live");
     setAppStatus("Questionnaire session is live.");
@@ -328,16 +323,6 @@ function handleToolCall(name, args) {
       nextQuestionId: nextQuestion?.id || null,
       progress: progressSnapshot(),
       continueInstruction: result.continueInstruction
-    };
-  }
-
-  if (name === "finish_questionnaire") {
-    finishQuestionnaire(args.status || "completed", args.summary || "Questionnaire finished.");
-    return {
-      ok: true,
-      finished: true,
-      status: state.sessionStatus,
-      progress: progressSnapshot()
     };
   }
 
@@ -682,7 +667,7 @@ function finishQuestionnaire(status, summary) {
   endRealtimeConnection();
   persistReport(summary);
   renderReport();
-  navigate("/report");
+  setAppStatus("Call ended. Use Report to open the clinician report.");
 }
 
 function endRealtimeConnection() {
@@ -702,7 +687,6 @@ function endRealtimeConnection() {
   updateMicrophoneButton(false);
   els.startButton.disabled = false;
   els.finishButton.disabled = true;
-  els.exitButton.disabled = true;
   setConnectionStatus("Idle");
 }
 
@@ -1165,7 +1149,7 @@ function buildFocusedInstructions(question) {
     "Do not move on until the current answer is complete enough to assign a score.",
     "Ask focused follow-ups only for the active section.",
     "For observation, reading, writing, and copying tasks, instruct the patient to use the on-screen camera or canvas controls when relevant.",
-    "If the patient asks to stop, call finish_questionnaire with status exited.",
+    "If the patient asks to stop or end the call, respond empathetically, say you understand, say goodbye, and tell them they may use the on-screen End call button.",
     "Call set_active_question before asking the active question if it has not already been set.",
     "Call record_question_result only when the active section is complete enough to score.",
     "Use numeric scores and never exceed the active section maximum score.",

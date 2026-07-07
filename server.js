@@ -124,20 +124,6 @@ async function createRealtimeSession(req, res, questionnaireId) {
           },
           required: ["questionId"]
         }
-      },
-      {
-        type: "function",
-        name: "finish_questionnaire",
-        description: "Mark the questionnaire as completed or exited so the clinician report can be displayed.",
-        parameters: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            status: { type: "string", enum: ["completed", "exited"] },
-            summary: { type: "string" }
-          },
-          required: ["status", "summary"]
-        }
       }
     ],
     tool_choice: "auto"
