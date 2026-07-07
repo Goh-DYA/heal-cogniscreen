@@ -12,8 +12,8 @@ Score **1 point** for each correct response within each question or activity.
 
 ## MMSE Questionnaire
 
-| Section | Question | Question (Chinese) | Scoring Notes | Maximum Score |
-|---|---|--|--|---|
+| Section | Question | Answer |  Question (Chinese) | Scoring Notes | Maximum Score |
+|---|---|--|--|---|---|
 | Orientation to Time | “What is the year? Season? Date? Day of the week? Month?” | "现在是哪一年? 现在是什么季节？今天是几号？今天是星期几？现在是几月份" |Ask for the date, then specifically ask for any omitted parts, such as: “Can you also tell me what season it is?” Score 1 point for each correct answer. | 5 |
 | Orientation to Place | “Where are we now: State? County? Town/city? Hospital? Floor?” | "我们现在是在哪一个省？我们现在是在哪一个县？我们现在是在哪一个城市? 这家医院的名称是什么？现在我们是在第几楼？"| Ask in turn for each location component, such as: “Can you tell me the name of this hospital?” Repeat for town/city, county, state, and floor as applicable. Score 1 point for each correct answer. | 5 |
 | Registration | "Now I will name you three things. After I finish, please repeat them. Ball, national flag, tree. " | "现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。"| Say the three unrelated objects clearly and slowly, allowing approximately 1 second for each. After all three have been said, ask the patient to repeat them. The number of objects correctly named on the first repetition determines the score, from 0–3. If the patient does not repeat all three correctly the first time, continue saying the names until the patient can repeat all three items, up to 6 trials. Record the number of trials: ______. If the patient does not eventually learn all three, recall cannot be meaningfully tested. After this task, tell the patient: “Try to remember the words, as I will ask for them in a little while.” | 3 |
