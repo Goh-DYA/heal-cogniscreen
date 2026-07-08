@@ -242,12 +242,12 @@ function beginRealtimeAdministration() {
     {
       type: "input_text",
       text: [
-        "Begin administering the selected questionnaire now.",
-        "Introduce yourself briefly, confirm the patient is ready, then ask the first question.",
-        "Use set_active_question before asking each question and record_question_result when complete."
+        "Start the call with the patient readiness introduction only.",
+        "Do not ask, preview, score, or mention the first questionnaire item yet.",
+        "After the patient responds that they are ready, continue with the active question using the latest session instructions."
       ].join(" ")
     }
-  ]);
+  ], { readinessIntroduction: true });
 }
 
 function handleRealtimeEvent(event) {
@@ -677,7 +677,7 @@ function updateRealtimeSessionInstructions(question) {
   }));
 }
 
-function sendRealtimeResponse(instructions) {
+function sendRealtimeResponse(instructions, options = {}) {
   if (!state.dataChannel || state.dataChannel.readyState !== "open") {
     appendTranscript("system", "Realtime connection is not ready.");
     return;
@@ -685,7 +685,9 @@ function sendRealtimeResponse(instructions) {
 
   const response = {
     output_modalities: ["audio"],
-    instructions: buildResponseInstructions(instructions)
+    instructions: options.readinessIntroduction
+      ? buildReadinessIntroductionInstructions(instructions)
+      : buildResponseInstructions(instructions)
   };
 
   state.dataChannel.send(JSON.stringify({
@@ -694,7 +696,7 @@ function sendRealtimeResponse(instructions) {
   }));
 }
 
-function sendRealtimeContent(content) {
+function sendRealtimeContent(content, options = {}) {
   if (!state.dataChannel || state.dataChannel.readyState !== "open") {
     appendTranscript("system", "Realtime connection is not ready.");
     return;
@@ -708,7 +710,7 @@ function sendRealtimeContent(content) {
       content
     }
   }));
-  sendRealtimeResponse();
+  sendRealtimeResponse(options.instructions, options);
 }
 
 function finishQuestionnaire(status, summary) {
@@ -1381,6 +1383,19 @@ function buildResponseInstructions(instructions) {
     focusedInstructions,
     "",
     activeSectionReinforcement,
+    instructions ? `Current turn instruction: ${instructions}` : ""
+  ].filter(Boolean).join("\n");
+}
+
+function buildReadinessIntroductionInstructions(instructions) {
+  return [
+    "You are a clinical questionnaire assistant starting a medical screening questionnaire by voice.",
+    "Begin with a warm, genuine, patient-friendly welcome.",
+    "Briefly explain that you will guide the patient through the questionnaire one question at a time and record their answers for the clinical team.",
+    "Ask whether the patient is ready to begin.",
+    "Stop after asking whether the patient is ready.",
+    "Do not ask, preview, score, or mention any questionnaire item yet.",
+    "Do not call set_active_question or record_question_result during this readiness introduction.",
     instructions ? `Current turn instruction: ${instructions}` : ""
   ].filter(Boolean).join("\n");
 }
