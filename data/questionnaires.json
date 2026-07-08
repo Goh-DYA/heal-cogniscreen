@@ -106,9 +106,15 @@
               "max_score": 1,
               "scoring": {
                 "type": "manual_or_semantic_match",
-                "accepted_answers": ["watch", "wristwatch", "手表"]
+                "accepted_answers": [
+                  "watch",
+                  "wristwatch",
+                  "手表"
+                ]
               },
-              "requires_materials": ["wristwatch"]
+              "requires_materials": [
+                "wristwatch"
+              ]
             },
             {
               "id": "naming_pencil",
@@ -121,9 +127,14 @@
               "max_score": 1,
               "scoring": {
                 "type": "manual_or_semantic_match",
-                "accepted_answers": ["pencil", "铅笔"]
+                "accepted_answers": [
+                  "pencil",
+                  "铅笔"
+                ]
               },
-              "requires_materials": ["pencil"]
+              "requires_materials": [
+                "pencil"
+              ]
             }
           ]
         },
@@ -160,7 +171,9 @@
                 "zh": "请您念一念这句话，并按这句话的意思去做。"
               },
               "visual_stimulus": "Close your eyes.",
-              "observable_steps": ["patient closes eyes"],
+              "observable_steps": [
+                "patient closes eyes"
+              ],
               "max_score": 1,
               "scoring": {
                 "type": "manual_observation"
@@ -184,7 +197,9 @@
               "scoring": {
                 "type": "manual_review"
               },
-              "requires_materials": ["blank paper"]
+              "requires_materials": [
+                "blank paper"
+              ]
             }
           ]
         },
@@ -386,9 +401,18 @@
                 "zh": "现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。"
               },
               "target_items": [
-                { "en": "ball", "zh": "皮球" },
-                { "en": "national flag", "zh": "国旗" },
-                { "en": "tree", "zh": "树木" }
+                {
+                  "en": "ball",
+                  "zh": "皮球"
+                },
+                {
+                  "en": "national flag",
+                  "zh": "国旗"
+                },
+                {
+                  "en": "tree",
+                  "zh": "树木"
+                }
               ],
               "max_score": 3,
               "scoring": {
@@ -410,7 +434,13 @@
                 "en": "I would like you to count backward from 100 by sevens. Keep going until I say stop.",
                 "zh": "现在请您算一算，从100开始连续减去7，一直减7直到我说停为止。"
               },
-              "expected_sequence": [93, 86, 79, 72, 65],
+              "expected_sequence": [
+                93,
+                86,
+                79,
+                72,
+                65
+              ],
               "stop_after_responses": 5,
               "max_score": 5,
               "scoring": {
@@ -470,9 +500,15 @@
               "max_score": 1,
               "scoring": {
                 "type": "manual_or_semantic_match",
-                "accepted_answers": ["watch", "wristwatch", "手表"]
+                "accepted_answers": [
+                  "watch",
+                  "wristwatch",
+                  "手表"
+                ]
               },
-              "requires_materials": ["wristwatch"]
+              "requires_materials": [
+                "wristwatch"
+              ]
             },
             {
               "id": "naming_pencil",
@@ -485,9 +521,14 @@
               "max_score": 1,
               "scoring": {
                 "type": "manual_or_semantic_match",
-                "accepted_answers": ["pencil", "铅笔"]
+                "accepted_answers": [
+                  "pencil",
+                  "铅笔"
+                ]
               },
-              "requires_materials": ["pencil"]
+              "requires_materials": [
+                "pencil"
+              ]
             }
           ]
         },
@@ -532,7 +573,9 @@
               "scoring": {
                 "type": "manual_observation_per_step"
               },
-              "requires_materials": ["blank paper"]
+              "requires_materials": [
+                "blank paper"
+              ]
             }
           ]
         },
@@ -549,7 +592,9 @@
                 "zh": "请您念一念这句话，并按这句话的意思去做。"
               },
               "visual_stimulus": "Close your eyes.",
-              "observable_steps": ["patient closes eyes"],
+              "observable_steps": [
+                "patient closes eyes"
+              ],
               "max_score": 1,
               "scoring": {
                 "type": "manual_observation"
@@ -573,7 +618,9 @@
               "scoring": {
                 "type": "manual_review"
               },
-              "requires_materials": ["blank paper"]
+              "requires_materials": [
+                "blank paper"
+              ]
             }
           ]
         },
