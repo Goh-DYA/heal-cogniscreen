@@ -25,17 +25,6 @@
           "max_score": 5,
           "items": [
             {
-              "id": "time_season",
-              "type": "spoken_response",
-              "prompt": {
-                "en": "What season is it now?",
-                "zh": "现在是什么季节？"
-              },
-              "max_score": 1,
-              "scoring": {},
-              "scoringNotes": "Ask for the current season. In Singapore, accept wet season, dry season, or monsoon season when appropriate. Score 1 point for an acceptable answer."
-            },
-            {
               "id": "time_date",
               "type": "spoken_response",
               "prompt": {
@@ -60,6 +49,17 @@
                 "expected_answer": "Wednesday"
               },
               "scoringNotes": "Ask for the day of the week. Score 1 point if the answer matches the expected answer."
+            },
+            {
+              "id": "time_season",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What season is it now?",
+                "zh": "现在是什么季节？"
+              },
+              "max_score": 1,
+              "scoring": {},
+              "scoringNotes": "Ask for the current season. In Singapore, accept wet season, dry season, or monsoon season when appropriate. Score 1 point for an acceptable answer."
             }
           ]
         },
@@ -139,8 +139,8 @@
               "id": "reading_close_eyes",
               "type": "written_instruction_response",
               "prompt": {
-                "en": "Please read this and do what it says.",
-                "zh": "请您念一念这句话，并按这句话的意思去做。"
+                "en": "Please do as the command on the screen says.",
+                "zh": "请您按这句话的意思去做。"
               },
               "visual_stimulus": "Close your eyes.",
               "observable_steps": [
@@ -549,9 +549,9 @@
             {
               "id": "reading_close_eyes",
               "type": "written_instruction_response",
-              "prompt": {
-                "en": "Please read this and do what it says.",
-                "zh": "请您念一念这句话，并按这句话的意思去做。"
+               "prompt": {
+                "en": "Please do as the command on the screen says.",
+                "zh": "请您按这句话的意思去做。"
               },
               "visual_stimulus": "Close your eyes.",
               "observable_steps": [
