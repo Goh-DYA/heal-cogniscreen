@@ -3,3 +3,7 @@
 node_modules/
 tmp-server.*
 archive/
+
+# Plans, Spec and Reports
+.superpowers/*
+docs/superpowers/*
