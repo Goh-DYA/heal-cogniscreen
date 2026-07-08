@@ -1,388 +1,601 @@
 {
-  "questionnaire_id": "mmse",
-  "title": "MMSE Questionnaire",
-  "version": "1.0",
-  "default_language": "en",
-  "total_max_score": 30,
-  "global_rules": {
-    "administer_in_order": true,
-    "pause_after_each_item": true,
-    "do_not_skip_items_unless_rule_says_so": true,
-    "record_audio_transcript": true,
-    "separate_spoken_prompt_from_scoring_notes": true
-  },
-  "materials_required": [
-    "wristwatch",
-    "pencil",
-    "blank paper",
-    "intersecting pentagons image"
-  ],
-  "sections": [
+  "questionnaires": [
     {
-      "id": "orientation_time",
-      "title": "Orientation to Time",
-      "max_score": 5,
-      "items": [
+      "questionnaire_id": "mmse_demo",
+      "title": "MMSE Demo",
+      "version": "1.0",
+      "default_language": "en",
+      "total_max_score": 11,
+      "global_rules": {
+        "administer_in_order": true,
+        "pause_after_each_item": true,
+        "do_not_skip_items_unless_rule_says_so": true,
+        "record_audio_transcript": true,
+        "separate_spoken_prompt_from_scoring_notes": true
+      },
+      "materials_required": [
+        "wristwatch",
+        "pencil",
+        "intersecting pentagons image"
+      ],
+      "sections": [
         {
-          "id": "time_year",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What is the year?",
-            "zh": "现在是哪一年？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "context_match",
-            "expected_answer": "current_year"
-          }
-        },
-        {
-          "id": "time_season",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What season is it now?",
-            "zh": "现在是什么季节？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "context_match",
-            "expected_answer": "current_season"
-          }
-        },
-        {
-          "id": "time_date",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What is today's date?",
-            "zh": "今天是几号？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "context_match",
-            "expected_answer": "current_date"
-          }
-        },
-        {
-          "id": "time_day",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What day of the week is it today?",
-            "zh": "今天是星期几？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "context_match",
-            "expected_answer": "current_day_of_week"
-          }
-        },
-        {
-          "id": "time_month",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What month is it now?",
-            "zh": "现在是几月份？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "context_match",
-            "expected_answer": "current_month"
-          }
-        }
-      ]
-    },
-    {
-      "id": "orientation_place",
-      "title": "Orientation to Place",
-      "max_score": 5,
-      "items": [
-        {
-          "id": "place_state",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What state or province are we in now?",
-            "zh": "我们现在是在哪一个省？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "session_context_match",
-            "expected_answer": "clinic_state_or_province"
-          }
-        },
-        {
-          "id": "place_county",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What county or district are we in now?",
-            "zh": "我们现在是在哪一个县？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "session_context_match",
-            "expected_answer": "clinic_county_or_district"
-          }
-        },
-        {
-          "id": "place_city",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What town or city are we in now?",
-            "zh": "我们现在是在哪一个城市？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "session_context_match",
-            "expected_answer": "clinic_city"
-          }
-        },
-        {
-          "id": "place_hospital",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What is the name of this clinic or hospital?",
-            "zh": "这家医院的名称是什么？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "session_context_match",
-            "expected_answer": "clinic_or_hospital_name"
-          }
-        },
-        {
-          "id": "place_floor",
-          "type": "spoken_response",
-          "prompt": {
-            "en": "What floor are we on now?",
-            "zh": "现在我们是在第几楼？"
-          },
-          "max_score": 1,
-          "scoring": {
-            "type": "session_context_match",
-            "expected_answer": "clinic_floor"
-          }
-        }
-      ]
-    },
-    {
-      "id": "registration",
-      "title": "Registration",
-      "max_score": 3,
-      "items": [
-        {
-          "id": "registration_three_words",
-          "type": "spoken_memory_encoding",
-          "prompt": {
-            "en": "Now I will name three things. After I finish, please repeat them: ball, national flag, tree.",
-            "zh": "现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。"
-          },
-          "target_items": [
-            { "en": "ball", "zh": "皮球" },
-            { "en": "national flag", "zh": "国旗" },
-            { "en": "tree", "zh": "树木" }
-          ],
-          "max_score": 3,
-          "scoring": {
-            "type": "count_correct_items_first_trial"
-          },
-          "post_item_instruction": "If the patient does not repeat all three correctly, continue teaching the words until learned, up to six trials. Then say: Try to remember the words, as I will ask for them later."
-        }
-      ]
-    },
-    {
-      "id": "attention_calculation",
-      "title": "Attention and Calculation",
-      "max_score": 5,
-      "items": [
-        {
-          "id": "serial_sevens",
-          "type": "spoken_calculation_sequence",
-          "prompt": {
-            "en": "I would like you to count backward from 100 by sevens. Keep going until I say stop.",
-            "zh": "现在请您算一算，从100开始连续减去7，一直减7直到我说停为止。"
-          },
-          "expected_sequence": [93, 86, 79, 72, 65],
-          "stop_after_responses": 5,
+          "id": "orientation_time",
+          "title": "Orientation to Time",
           "max_score": 5,
-          "scoring": {
-            "type": "count_correct_sequence_items"
-          },
-          "fallback_if_unable": "world_backwards"
+          "items": [
+            {
+              "id": "time_year",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What is the year?",
+                "zh": "现在是哪一年？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "2026"
+              }
+            },
+            {
+              "id": "time_season",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What season is it now?",
+                "zh": "现在是什么季节？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match"
+              }
+            },
+            {
+              "id": "time_date",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What is today's date?",
+                "zh": "今天是几号？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "8"
+              }
+            },
+            {
+              "id": "time_day",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What day of the week is it today?",
+                "zh": "今天是星期几？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "Wednesday"
+              }
+            },
+            {
+              "id": "time_month",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What month is it now?",
+                "zh": "现在是几月份？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "current_month"
+              }
+            }
+          ]
         },
         {
-          "id": "world_backwards",
-          "type": "spoken_spelling",
-          "prompt": {
-            "en": "Please spell the word WORLD backwards.",
-            "zh": "请您把英文单词 WORLD 倒着拼出来。"
-          },
-          "expected_answer": "DLROW",
+          "id": "naming",
+          "title": "Naming",
+          "max_score": 2,
+          "items": [
+            {
+              "id": "naming_watch",
+              "type": "object_naming",
+              "prompt": {
+                "en": "Could you name this item?",
+                "zh": "请问这是什么？"
+              },
+              "visual_stimulus": "/images/naming_wristwatch.png",
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_or_semantic_match",
+                "accepted_answers": ["watch", "wristwatch", "手表"]
+              },
+              "requires_materials": ["wristwatch"]
+            },
+            {
+              "id": "naming_pencil",
+              "type": "object_naming",
+              "prompt": {
+                "en": "Could you name this item?",
+                "zh": "请问这是什么？"
+              },
+              "visual_stimulus": "/images/naming_pencil.png",
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_or_semantic_match",
+                "accepted_answers": ["pencil", "铅笔"]
+              },
+              "requires_materials": ["pencil"]
+            }
+          ]
+        },
+        {
+          "id": "repetition",
+          "title": "Repetition",
+          "max_score": 1,
+          "items": [
+            {
+              "id": "repeat_phrase",
+              "type": "spoken_repetition",
+              "prompt": {
+                "en": "Repeat the phrase: Everyone worked together to pull the rope tight.",
+                "zh": "请您跟我说：大家齐心协力拉紧绳。"
+              },
+              "expected_answer": "Everyone worked together to pull the rope tight",
+              "max_score": 1,
+              "scoring": {
+                "type": "exact_or_clinician_review"
+              }
+            }
+          ]
+        },
+        {
+          "id": "reading",
+          "title": "Reading",
+          "max_score": 1,
+          "items": [
+            {
+              "id": "reading_close_eyes",
+              "type": "written_instruction_response",
+              "prompt": {
+                "en": "Please read this and do what it says.",
+                "zh": "请您念一念这句话，并按这句话的意思去做。"
+              },
+              "visual_stimulus": "Close your eyes.",
+              "observable_steps": ["patient closes eyes"],
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_observation"
+              }
+            }
+          ]
+        },
+        {
+          "id": "writing",
+          "title": "Writing",
+          "max_score": 1,
+          "items": [
+            {
+              "id": "writing_sentence",
+              "type": "written_response",
+              "prompt": {
+                "en": "Make up and write a sentence about anything.",
+                "zh": "请您写一个完整的句子。"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_review"
+              },
+              "requires_materials": ["blank paper"]
+            }
+          ]
+        },
+        {
+          "id": "copying",
+          "title": "Copying",
+          "max_score": 1,
+          "items": [
+            {
+              "id": "copying_pentagons",
+              "type": "drawing_copy",
+              "prompt": {
+                "en": "Please copy this picture.",
+                "zh": "请您照着这个样子把它画下来。"
+              },
+              "visual_stimulus": "/mmse_picture_copying.png",
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_review"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "questionnaire_id": "mmse",
+      "title": "MMSE Questionnaire",
+      "version": "1.0",
+      "default_language": "en",
+      "total_max_score": 30,
+      "global_rules": {
+        "administer_in_order": true,
+        "pause_after_each_item": true,
+        "do_not_skip_items_unless_rule_says_so": true,
+        "record_audio_transcript": true,
+        "separate_spoken_prompt_from_scoring_notes": true
+      },
+      "materials_required": [
+        "wristwatch",
+        "pencil",
+        "blank paper",
+        "intersecting pentagons image"
+      ],
+      "sections": [
+        {
+          "id": "orientation_time",
+          "title": "Orientation to Time",
           "max_score": 5,
-          "scoring": {
-            "type": "letters_in_correct_order"
-          },
-          "administer_only_if": "serial_sevens_unable_or_refused"
-        }
-      ]
-    },
-    {
-      "id": "recall",
-      "title": "Recall",
-      "max_score": 3,
-      "items": [
-        {
-          "id": "recall_three_words",
-          "type": "spoken_memory_recall",
-          "prompt": {
-            "en": "Earlier I told you the names of three things. Can you tell me what those were?",
-            "zh": "刚才我告诉过您三种东西的名称。现在请您说出那三种东西是什么吗？"
-          },
-          "target_items_from": "registration_three_words",
-          "max_score": 3,
-          "scoring": {
-            "type": "count_correct_recalled_items"
-          }
-        }
-      ]
-    },
-    {
-      "id": "naming",
-      "title": "Naming",
-      "max_score": 2,
-      "items": [
-        {
-          "id": "naming_watch",
-          "type": "object_naming",
-          "prompt": {
-            "en": "Could you name this item?",
-            "zh": "请问这是什么？"
-          },
-          "visual_stimulus": "Show the patient a wristwatch.",
-          "max_score": 1,
-          "scoring": {
-            "type": "manual_or_semantic_match",
-            "accepted_answers": ["watch", "wristwatch", "手表"]
-          },
-          "requires_materials": ["wristwatch"]
+          "items": [
+            {
+              "id": "time_year",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What is the year?",
+                "zh": "现在是哪一年？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "2026"
+              }
+            },
+            {
+              "id": "time_season",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What season is it now?",
+                "zh": "现在是什么季节？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match"
+              }
+            },
+            {
+              "id": "time_date",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What is today's date?",
+                "zh": "今天是几号？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "8"
+              }
+            },
+            {
+              "id": "time_day",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What day of the week is it today?",
+                "zh": "今天是星期几？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "Wednesday"
+              }
+            },
+            {
+              "id": "time_month",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What month is it now?",
+                "zh": "现在是几月份？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "context_match",
+                "expected_answer": "current_month"
+              }
+            }
+          ]
         },
         {
-          "id": "naming_pencil",
-          "type": "object_naming",
-          "prompt": {
-            "en": "Could you name this item?",
-            "zh": "请问这是什么？"
-          },
-          "visual_stimulus": "Show the patient a pencil.",
-          "max_score": 1,
-          "scoring": {
-            "type": "manual_or_semantic_match",
-            "accepted_answers": ["pencil", "铅笔"]
-          },
-          "requires_materials": ["pencil"]
-        }
-      ]
-    },
-    {
-      "id": "repetition",
-      "title": "Repetition",
-      "max_score": 1,
-      "items": [
+          "id": "orientation_place",
+          "title": "Orientation to Place",
+          "max_score": 5,
+          "items": [
+            {
+              "id": "place_state",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What state or province are we in now?",
+                "zh": "我们现在是在哪一个省？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "session_context_match",
+                "expected_answer": "clinic_state_or_province"
+              }
+            },
+            {
+              "id": "place_county",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What county or district are we in now?",
+                "zh": "我们现在是在哪一个县？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "session_context_match",
+                "expected_answer": "clinic_county_or_district"
+              }
+            },
+            {
+              "id": "place_city",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What town or city are we in now?",
+                "zh": "我们现在是在哪一个城市？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "session_context_match",
+                "expected_answer": "clinic_city"
+              }
+            },
+            {
+              "id": "place_hospital",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What is the name of this clinic or hospital?",
+                "zh": "这家医院的名称是什么？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "session_context_match",
+                "expected_answer": "clinic_or_hospital_name"
+              }
+            },
+            {
+              "id": "place_floor",
+              "type": "spoken_response",
+              "prompt": {
+                "en": "What floor are we on now?",
+                "zh": "现在我们是在第几楼？"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "session_context_match",
+                "expected_answer": "clinic_floor"
+              }
+            }
+          ]
+        },
         {
-          "id": "repeat_phrase",
-          "type": "spoken_repetition",
-          "prompt": {
-            "en": "Repeat the phrase: Everyone worked together to pull the rope tight.",
-            "zh": "请您跟我说：大家齐心协力拉紧绳。"
-          },
-          "expected_answer": "Everyone worked together to pull the rope tight",
+          "id": "registration",
+          "title": "Registration",
+          "max_score": 3,
+          "items": [
+            {
+              "id": "registration_three_words",
+              "type": "spoken_memory_encoding",
+              "prompt": {
+                "en": "Now I will name three things. After I finish, please repeat them: ball, national flag, tree.",
+                "zh": "现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。"
+              },
+              "target_items": [
+                { "en": "ball", "zh": "皮球" },
+                { "en": "national flag", "zh": "国旗" },
+                { "en": "tree", "zh": "树木" }
+              ],
+              "max_score": 3,
+              "scoring": {
+                "type": "count_correct_items_first_trial"
+              },
+              "post_item_instruction": "If the patient does not repeat all three correctly, continue teaching the words until learned, up to six trials. Then say: Try to remember the words, as I will ask for them later."
+            }
+          ]
+        },
+        {
+          "id": "attention_calculation",
+          "title": "Attention and Calculation",
+          "max_score": 5,
+          "items": [
+            {
+              "id": "serial_sevens",
+              "type": "spoken_calculation_sequence",
+              "prompt": {
+                "en": "I would like you to count backward from 100 by sevens. Keep going until I say stop.",
+                "zh": "现在请您算一算，从100开始连续减去7，一直减7直到我说停为止。"
+              },
+              "expected_sequence": [93, 86, 79, 72, 65],
+              "stop_after_responses": 5,
+              "max_score": 5,
+              "scoring": {
+                "type": "count_correct_sequence_items"
+              },
+              "fallback_if_unable": "world_backwards"
+            },
+            {
+              "id": "world_backwards",
+              "type": "spoken_spelling",
+              "prompt": {
+                "en": "Please spell the word WORLD backwards.",
+                "zh": "请您把英文单词 WORLD 倒着拼出来。"
+              },
+              "expected_answer": "DLROW",
+              "max_score": 5,
+              "scoring": {
+                "type": "letters_in_correct_order"
+              },
+              "administer_only_if": "serial_sevens_unable_or_refused"
+            }
+          ]
+        },
+        {
+          "id": "recall",
+          "title": "Recall",
+          "max_score": 3,
+          "items": [
+            {
+              "id": "recall_three_words",
+              "type": "spoken_memory_recall",
+              "prompt": {
+                "en": "Earlier I told you the names of three things. Can you tell me what those were?",
+                "zh": "刚才我告诉过您三种东西的名称。现在请您说出那三种东西是什么吗？"
+              },
+              "target_items_from": "registration_three_words",
+              "max_score": 3,
+              "scoring": {
+                "type": "count_correct_recalled_items"
+              }
+            }
+          ]
+        },
+        {
+          "id": "naming",
+          "title": "Naming",
+          "max_score": 2,
+          "items": [
+            {
+              "id": "naming_watch",
+              "type": "object_naming",
+              "prompt": {
+                "en": "Could you name this item?",
+                "zh": "请问这是什么？"
+              },
+              "visual_stimulus": "/images/naming_wristwatch.png",
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_or_semantic_match",
+                "accepted_answers": ["watch", "wristwatch", "手表"]
+              },
+              "requires_materials": ["wristwatch"]
+            },
+            {
+              "id": "naming_pencil",
+              "type": "object_naming",
+              "prompt": {
+                "en": "Could you name this item?",
+                "zh": "请问这是什么？"
+              },
+              "visual_stimulus": "/images/naming_pencil.png",
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_or_semantic_match",
+                "accepted_answers": ["pencil", "铅笔"]
+              },
+              "requires_materials": ["pencil"]
+            }
+          ]
+        },
+        {
+          "id": "repetition",
+          "title": "Repetition",
           "max_score": 1,
-          "scoring": {
-            "type": "exact_or_clinician_review"
-          }
-        }
-      ]
-    },
-    {
-      "id": "three_stage_command",
-      "title": "Three-Stage Command",
-      "max_score": 3,
-      "items": [
+          "items": [
+            {
+              "id": "repeat_phrase",
+              "type": "spoken_repetition",
+              "prompt": {
+                "en": "Repeat the phrase: Everyone worked together to pull the rope tight.",
+                "zh": "请您跟我说：大家齐心协力拉紧绳。"
+              },
+              "expected_answer": "Everyone worked together to pull the rope tight",
+              "max_score": 1,
+              "scoring": {
+                "type": "exact_or_clinician_review"
+              }
+            }
+          ]
+        },
         {
           "id": "three_stage_command",
-          "type": "physical_command",
-          "prompt": {
-            "en": "Take the paper in your right hand, fold it in half, and put it on the floor.",
-            "zh": "请用您的右手拿这张纸，把它折成对半，然后将纸放在地上。"
-          },
-          "observable_steps": [
-            "takes paper in right hand",
-            "folds paper in half",
-            "puts paper on the floor"
-          ],
+          "title": "Three-Stage Command",
           "max_score": 3,
-          "scoring": {
-            "type": "manual_observation_per_step"
-          },
-          "requires_materials": ["blank paper"]
-        }
-      ]
-    },
-    {
-      "id": "reading",
-      "title": "Reading",
-      "max_score": 1,
-      "items": [
+          "items": [
+            {
+              "id": "three_stage_command",
+              "type": "physical_command",
+              "prompt": {
+                "en": "Take the paper in your right hand, fold it in half, and put it on the floor.",
+                "zh": "请用您的右手拿这张纸，把它折成对半，然后将纸放在地上。"
+              },
+              "observable_steps": [
+                "takes paper in right hand",
+                "folds paper in half",
+                "puts paper on the floor"
+              ],
+              "max_score": 3,
+              "scoring": {
+                "type": "manual_observation_per_step"
+              },
+              "requires_materials": ["blank paper"]
+            }
+          ]
+        },
         {
-          "id": "reading_close_eyes",
-          "type": "written_instruction_response",
-          "prompt": {
-            "en": "Please read this and do what it says.",
-            "zh": "请您念一念这句话，并按这句话的意思去做。"
-          },
-          "visual_stimulus": "Close your eyes.",
-          "observable_steps": ["patient closes eyes"],
+          "id": "reading",
+          "title": "Reading",
           "max_score": 1,
-          "scoring": {
-            "type": "manual_observation"
-          }
-        }
-      ]
-    },
-    {
-      "id": "writing",
-      "title": "Writing",
-      "max_score": 1,
-      "items": [
+          "items": [
+            {
+              "id": "reading_close_eyes",
+              "type": "written_instruction_response",
+              "prompt": {
+                "en": "Please read this and do what it says.",
+                "zh": "请您念一念这句话，并按这句话的意思去做。"
+              },
+              "visual_stimulus": "Close your eyes.",
+              "observable_steps": ["patient closes eyes"],
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_observation"
+              }
+            }
+          ]
+        },
         {
-          "id": "writing_sentence",
-          "type": "written_response",
-          "prompt": {
-            "en": "Make up and write a sentence about anything.",
-            "zh": "请您写一个完整的句子。"
-          },
+          "id": "writing",
+          "title": "Writing",
           "max_score": 1,
-          "scoring": {
-            "type": "manual_review"
-          },
-          "requires_materials": ["blank paper"]
-        }
-      ]
-    },
-    {
-      "id": "copying",
-      "title": "Copying",
-      "max_score": 1,
-      "items": [
+          "items": [
+            {
+              "id": "writing_sentence",
+              "type": "written_response",
+              "prompt": {
+                "en": "Make up and write a sentence about anything.",
+                "zh": "请您写一个完整的句子。"
+              },
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_review"
+              },
+              "requires_materials": ["blank paper"]
+            }
+          ]
+        },
         {
-          "id": "copying_pentagons",
-          "type": "drawing_copy",
-          "prompt": {
-            "en": "Please copy this picture.",
-            "zh": "请您照着这个样子把它画下来。"
-          },
-          "visual_stimulus": "/mmse_picture_copying.png",
+          "id": "copying",
+          "title": "Copying",
           "max_score": 1,
-          "scoring": {
-            "type": "manual_review"
-          }
+          "items": [
+            {
+              "id": "copying_pentagons",
+              "type": "drawing_copy",
+              "prompt": {
+                "en": "Please copy this picture.",
+                "zh": "请您照着这个样子把它画下来。"
+              },
+              "visual_stimulus": "/mmse_picture_copying.png",
+              "max_score": 1,
+              "scoring": {
+                "type": "manual_review"
+              }
+            }
+          ]
         }
       ]
     }

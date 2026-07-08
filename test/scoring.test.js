@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildInstructions, denormalizeQuestionnaire, realtimeNetworkErrorBody } from "../server.js";
+import { buildInstructions, buildRealtimeCallsMultipart, buildRealtimeSession, denormalizeQuestionnaire, realtimeNetworkErrorBody } from "../server.js";
 import { normalizeQuestionnaire } from "../public/schema.js";
 import { normalizeAnswer, matchesAny, scoreItem } from "../public/scoring.js";
 
@@ -120,6 +120,36 @@ test("denormalizeQuestionnaire preserves raw item fields and omits derived scori
   assert.equal(Object.hasOwn(item.scoring, "mode"), false);
 });
 
+test("denormalizeQuestionnaire saves edited expected answers under scoring", () => {
+  const rawQuestionnaire = {
+    questionnaire_id: "test-mmse",
+    title: "Test MMSE",
+    sections: [
+      {
+        id: "orientation_time",
+        title: "Orientation to Time",
+        items: [
+          {
+            id: "time_year",
+            type: "spoken_response",
+            prompt: { en: "What is the year?", zh: "" },
+            max_score: 1,
+            scoring: { type: "context_match", expected_answer: "current_year" }
+          }
+        ]
+      }
+    ]
+  };
+
+  const normalized = normalizeQuestionnaire(rawQuestionnaire);
+  normalized.sections[0].items[0].expectedAnswer = "2026";
+  const nested = denormalizeQuestionnaire(normalized);
+  const item = nested.sections[0].items[0];
+
+  assert.equal(item.scoring.expected_answer, "2026");
+  assert.equal(Object.hasOwn(item, "expected_answer"), false);
+});
+
 test("buildInstructions exposes clinic and date facts and defers item details to the client", () => {
   const questionnaire = {
     id: "test-mmse",
@@ -183,6 +213,32 @@ test("buildInstructions exposes clinic and date facts and defers item details to
   assert.match(instructions, /state\/province Singapore/);
   assert.match(instructions, /county\/district Central/);
   assert.match(instructions, /source of truth for the active item/);
+});
+
+test("buildRealtimeSession includes the required realtime session type", () => {
+  const session = buildRealtimeSession(
+    {
+      title: "Test MMSE",
+      sections: []
+    },
+    {
+      resolvedAnswers: {},
+      clinic: {},
+      dateFacts: {}
+    }
+  );
+
+  assert.equal(session.type, "realtime");
+  assert.equal(session.model, "gpt-realtime-2.1-mini");
+});
+
+test("buildRealtimeCallsMultipart sends session as a JSON form field", () => {
+  const multipart = buildRealtimeCallsMultipart("v=0", { type: "realtime", model: "gpt-realtime-2.1-mini" }, "test-boundary");
+
+  assert.equal(multipart.contentType, "multipart/form-data; boundary=test-boundary");
+  assert.match(multipart.body, /Content-Disposition: form-data; name="sdp"\r\nContent-Type: application\/sdp\r\n\r\nv=0/);
+  assert.match(multipart.body, /Content-Disposition: form-data; name="session"\r\nContent-Type: application\/json\r\n\r\n\{"type":"realtime","model":"gpt-realtime-2.1-mini"\}/);
+  assert.doesNotMatch(multipart.body, /filename=/);
 });
 
 test("realtimeNetworkErrorBody describes OpenAI DNS failures", () => {
