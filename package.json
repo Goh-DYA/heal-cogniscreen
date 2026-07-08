@@ -6,7 +6,7 @@
   "description": "Realtime voice questionnaire platform for MMSE administration",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/scoring.js && node --check public/schema.js && node --check public/report.js && node --check public/routes.js && node --check public/section-summary.js",
+    "check": "node --check server.js && node --check public/app.js && node --check public/schema.js && node --check public/report.js && node --check public/routes.js && node --check public/section-summary.js",
     "test": "node --test"
   },
   "engines": {

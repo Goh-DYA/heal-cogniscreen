@@ -1,19 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { codeEvidenceLines, reportItemDetails, reportMediaArtifacts, restoreMediaArtifacts, reportPage } from "../public/report.js";
-
-test("codeEvidenceLines includes extracted answer and matched context", () => {
-  const lines = codeEvidenceLines({
-    scoredBy: "code",
-    extracted: "18",
-    matchedAgainst: "8"
-  });
-
-  assert.deepEqual(lines, [
-    { label: "Extracted answer", value: "18" },
-    { label: "Matched against", value: "8" }
-  ]);
-});
+import { reportItemDetails, reportMediaArtifacts, restoreMediaArtifacts, reportPage } from "../public/report.js";
 
 test("reportPage returns one scored section for the selected page", () => {
   const sections = [
@@ -48,23 +35,20 @@ test("reportPage returns one scored section for the selected page", () => {
   });
 });
 
-test("reportItemDetails formats scored-by, answer, expected answer, and notes", () => {
+test("reportItemDetails formats model score source, answer, expected answer, and notes", () => {
   const item = {
     expectedAnswer: "2026",
     maxScore: 1
   };
   const response = {
-    scoredBy: "code",
+    scoredBy: "model",
     response: "The patient said twenty twenty-six.",
-    extracted: "2026",
-    matchedAgainst: "2026",
     notes: "Patient responded with the year 2026."
   };
 
   assert.deepEqual(reportItemDetails(item, response), {
-    scoredBy: "Code",
+    scoredBy: "Model",
     patientAnswer: "The patient said twenty twenty-six.",
-    extractedAnswer: "2026",
     expectedAnswer: "2026",
     aiText: "Patient responded with the year 2026."
   });

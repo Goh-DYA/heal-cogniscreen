@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
-import { deriveCapability, deriveScoringMode, normalizeQuestionnaire } from "../public/schema.js";
+import { deriveCapability, normalizeQuestionnaire } from "../public/schema.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const raw = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json"), "utf8")).questionnaires[0];
+const raw = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json"), "utf8"))
+  .questionnaires.find((questionnaire) => questionnaire.questionnaire_id === "mmse");
 
 test("deriveCapability maps types to modalities", () => {
   assert.equal(deriveCapability("object_naming"), "voice");
@@ -16,20 +17,6 @@ test("deriveCapability maps types to modalities", () => {
   assert.equal(deriveCapability("written_response"), "writing");
   assert.equal(deriveCapability("spoken_response"), "voice");
   assert.equal(deriveCapability("anything_else"), "voice");
-});
-
-test("deriveScoringMode splits code vs model", () => {
-  assert.equal(deriveScoringMode("context_match"), "code");
-  assert.equal(deriveScoringMode("session_context_match"), "code");
-  assert.equal(deriveScoringMode("count_correct_items_first_trial"), "code");
-  assert.equal(deriveScoringMode("count_correct_sequence_items"), "code");
-  assert.equal(deriveScoringMode("letters_in_correct_order"), "code");
-  assert.equal(deriveScoringMode("count_correct_recalled_items"), "code");
-  assert.equal(deriveScoringMode("manual_or_semantic_match"), "model");
-  assert.equal(deriveScoringMode("exact_or_clinician_review"), "model");
-  assert.equal(deriveScoringMode("manual_observation"), "model");
-  assert.equal(deriveScoringMode("manual_observation_per_step"), "model");
-  assert.equal(deriveScoringMode("manual_review"), "model");
 });
 
 test("normalizeQuestionnaire flattens sections/items with metadata", () => {
@@ -43,8 +30,9 @@ test("normalizeQuestionnaire flattens sections/items with metadata", () => {
   assert.equal(year.id, "time_year");
   assert.equal(year.sectionId, "orientation_time");
   assert.equal(year.capability, "voice");
-  assert.equal(year.scoring.mode, "code");
+  assert.equal(Object.hasOwn(year.scoring, "type"), false);
   assert.equal(year.expectedAnswer, year.scoring.expected_answer);
+  assert.match(year.scoringNotes, /current year/);
 });
 
 test("normalizeQuestionnaire preserves type-specific fields", () => {
@@ -53,17 +41,21 @@ test("normalizeQuestionnaire preserves type-specific fields", () => {
   const serial = items.find((i) => i.id === "serial_sevens");
   assert.deepEqual(serial.expectedSequence, [93, 86, 79, 72, 65]);
   assert.equal(serial.fallbackIfUnable, "world_backwards");
+  assert.match(serial.scoringNotes, /count backward/);
   const world = items.find((i) => i.id === "world_backwards");
   assert.equal(world.administerOnlyIf, "serial_sevens_unable_or_refused");
   const naming = items.find((i) => i.id === "naming_watch");
-  assert.deepEqual(naming.acceptedAnswers, ["watch", "wristwatch", "手表"]);
-  assert.equal(naming.scoring.mode, "model");
+  assert.equal(naming.acceptedAnswers.length, 3);
+  assert.equal(naming.acceptedAnswers[0], "watch");
+  assert.equal(Object.hasOwn(naming.scoring, "type"), false);
   assert.equal(naming.capability, "voice");
   assert.equal(naming.visualStimulus, "/images/naming_wristwatch.png");
+  assert.match(naming.scoringNotes, /watch/);
   const pencil = items.find((i) => i.id === "naming_pencil");
   assert.equal(pencil.visualStimulus, "/images/naming_pencil.png");
   const command = items.find((i) => i.id === "three_stage_command");
   assert.equal(command.capability, "camera");
+  assert.match(command.scoringNotes, /camera evidence/);
   const reg = items.find((i) => i.id === "registration_three_words");
   assert.equal(reg.targetItems.length, 3);
 });

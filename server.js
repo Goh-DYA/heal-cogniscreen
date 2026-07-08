@@ -170,18 +170,13 @@ export function buildRealtimeSession(questionnaire, context) {
           additionalProperties: false,
           properties: {
             questionId: { type: "string" },
-            extracted: {
-              description: "Structured patient answer for code-scored items. String for orientation; array of spoken words for registration/recall; array of numbers for serial sevens; the spelled string for WORLD backwards.",
-              type: ["string", "array", "number", "null"],
-              items: { type: ["string", "number"] }
-            },
-            score: { type: ["number", "null"], description: "Only used for model-scored items; ignored for code-scored items." },
+            score: { type: "number", description: "Numeric score assigned by the model for this completed item." },
             response: { type: "string" },
             notes: { type: "string" },
             complete: { type: "boolean" },
             unable: { type: "boolean", description: "Set true only when the patient cannot or will not attempt serial-7s, to trigger the WORLD-backwards fallback." }
           },
-          required: ["questionId", "response", "notes", "complete"]
+          required: ["questionId", "score", "response", "notes", "complete"]
         }
       },
       {
@@ -275,6 +270,7 @@ function cloneJson(value) {
 function cleanScoring(scoring) {
   const cleaned = { ...(scoring || {}) };
   delete cleaned.mode;
+  delete cleaned.type;
   return cleaned;
 }
 
@@ -314,6 +310,7 @@ function denormalizeItem(item) {
   if (item.expectedAnswer !== undefined) {
     output.scoring.expected_answer = item.expectedAnswer;
   }
+  setIfPresent(output, "scoringNotes", item.scoringNotes);
   setIfPresent(output, "target_items", item.targetItems);
   setIfPresent(output, "target_items_from", item.targetItemsFrom);
   setIfPresent(output, "expected_sequence", item.expectedSequence);
@@ -406,9 +403,6 @@ function resolveSessionContext(questionnaire) {
   const resolvedAnswers = {};
   for (const section of questionnaire.sections) {
     for (const item of section.items) {
-      if (item.scoring.mode !== "code") {
-        continue;
-      }
       if (item.type === "spoken_memory_recall") {
         // recall compares against the registration target items
         const reg = questionnaire.sections

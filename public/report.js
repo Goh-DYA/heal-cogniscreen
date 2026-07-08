@@ -1,16 +1,3 @@
-export function codeEvidenceLines(response) {
-  if (response?.scoredBy !== "code") {
-    return [];
-  }
-
-  return [
-    ["Extracted answer", response.extracted],
-    ["Matched against", response.matchedAgainst]
-  ]
-    .filter(([, value]) => hasReportValue(value))
-    .map(([label, value]) => ({ label, value: formatReportValue(value) }));
-}
-
 export function reportPage(sections, responses, itemIds, pageIndex) {
   const visibleSections = (sections || [])
     .map((section) => {
@@ -34,15 +21,13 @@ export function reportPage(sections, responses, itemIds, pageIndex) {
 }
 
 export function reportItemDetails(item, response) {
-  const extractedAnswer = formatOptionalValue(response?.extracted);
-  const expectedAnswer = formatOptionalValue(response?.matchedAgainst ?? item.expectedAnswer ?? item.expectedSequence ?? item.targetItems);
+  const expectedAnswer = formatOptionalValue(item.expectedAnswer ?? item.expectedSequence ?? item.targetItems);
 
   return {
     scoredBy: scoredByLabel(response?.scoredBy),
     patientAnswer: response?.response || "No response recorded.",
-    extractedAnswer,
     expectedAnswer,
-    aiText: response?.notes || fallbackAiText(extractedAnswer, expectedAnswer)
+    aiText: response?.notes || fallbackAiText(expectedAnswer)
   };
 }
 
@@ -102,17 +87,14 @@ function maxScoreItems(items) {
 }
 
 function scoredByLabel(scoredBy) {
-  if (scoredBy === "code") {
-    return "Code";
-  }
   if (scoredBy === "model") {
     return "Model";
   }
   return "-";
 }
 
-function fallbackAiText(extractedAnswer, expectedAnswer) {
-  if (extractedAnswer !== "-" || expectedAnswer !== "-") {
+function fallbackAiText(expectedAnswer) {
+  if (expectedAnswer !== "-") {
     return "Generated scoring evidence is available above for clinician review.";
   }
   return "No AI-generated scoring note was recorded for this item.";

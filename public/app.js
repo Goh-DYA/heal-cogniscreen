@@ -1,6 +1,4 @@
-import { scoreItem } from "./scoring.js";
 import { pagerPages, reportItemDetails, reportMediaArtifacts, reportPage, restoreMediaArtifacts } from "./report.js";
-import { deriveScoringMode } from "./schema.js";
 import { summarizeSections } from "./section-summary.js";
 import { viewForPath } from "./routes.js";
 
@@ -338,12 +336,11 @@ function handleToolCall(name, args) {
 
   if (name === "record_question_result") {
     const result = recordResponse(args);
-    const nextQuestion = getNextIncompleteQuestion();
     return {
       ok: result.ok,
       error: result.error,
       recordedQuestionId: result.recordedQuestionId || null,
-      nextQuestionId: nextQuestion?.id || null,
+      nextQuestionId: getNextIncompleteQuestion()?.id || null,
       progress: progressSnapshot(),
       continueInstruction: result.continueInstruction
     };
@@ -380,14 +377,7 @@ function recordResponse(args) {
     };
   }
 
-  let score;
-  let matchedAgainst;
-  if (question.scoring.mode === "code") {
-    score = scoreItem(question, args.extracted, state.sessionContext);
-    matchedAgainst = codeMatchedAgainst(question);
-  } else {
-    score = clampScore(Number(args.score), question.maxScore);
-  }
+  const score = clampScore(Number(args.score), question.maxScore);
 
   if (args.unable && question.fallbackIfUnable) {
     state.fallbackUnlocked.add(question.fallbackIfUnable);
@@ -397,11 +387,10 @@ function recordResponse(args) {
     questionId: question.id,
     section: question.sectionId,
     question: question.prompt.en,
-    scoredBy: question.scoring.mode,
+    scoredBy: "model",
     score,
     maxScore: question.maxScore,
     response: String(args.response || ""),
-    ...(question.scoring.mode === "code" ? { extracted: args.extracted ?? null, matchedAgainst } : {}),
     notes: String(args.notes || ""),
     complete: Boolean(args.complete)
   });
@@ -782,10 +771,6 @@ function renderEditor() {
   els.questionEditorList.append(createSectionEditor(sections[sectionIndex], sectionIndex));
 }
 
-function editorScoringMode(item) {
-  return deriveScoringMode(item.scoring?.type);
-}
-
 function createSectionEditor(section, sectionIndex) {
   section.items = section.items || [];
   const wrapper = document.createElement("div");
@@ -826,7 +811,8 @@ function createSectionEditor(section, sectionIndex) {
       type: "spoken_response",
       prompt: { en: "", zh: "" },
       maxScore: 1,
-      scoring: { type: "context_match" }
+      scoring: {},
+      scoringNotes: ""
     });
     renderEditor();
   });
@@ -908,7 +894,9 @@ function createItemEditor(item, sectionIndex, itemIndex) {
     <label>Expected answer
       <input data-item-expected-answer value="${escapeAttribute(item.expectedAnswer || "")}">
     </label>
-    <p class="editor-derived">Scoring: <strong>${editorScoringMode(item)}</strong> (${escapeHtml(item.scoring?.type || "")})</p>
+    <label class="wide">Scoring notes
+      <textarea data-item-scoring-notes rows="3">${escapeHtml(item.scoringNotes || "")}</textarea>
+    </label>
     <div class="row-actions">
       <button class="danger" data-remove-item type="button">Remove Item</button>
     </div>
@@ -924,6 +912,8 @@ function createItemEditor(item, sectionIndex, itemIndex) {
       editing[target.dataset.itemField] = target.value;
     } else if (target.dataset.itemExpectedAnswer !== undefined) {
       editing.expectedAnswer = target.value;
+    } else if (target.dataset.itemScoringNotes !== undefined) {
+      editing.scoringNotes = target.value;
     } else if (target.dataset.itemPrompt) {
       editing.prompt = editing.prompt || {};
       editing.prompt[target.dataset.itemPrompt] = target.value;
@@ -1068,7 +1058,6 @@ function renderReportSection(section) {
     row.innerHTML = `
       <h5>${escapeHtml(item.prompt.en)}</h5>
       <p><strong>Scored by:</strong> ${escapeHtml(details.scoredBy)}</p>
-      <p><strong>Extracted Answer:</strong> ${escapeHtml(details.extractedAnswer)}</p>
       <p><strong>Expected Answer:</strong> ${escapeHtml(details.expectedAnswer)}</p>
       <p><strong>Patient's Answer:</strong> ${escapeHtml(details.patientAnswer)}</p>
       <p>${escapeHtml(details.aiText)}</p>
@@ -1327,20 +1316,6 @@ function scoreForItems(items) {
   }, 0);
 }
 
-function codeMatchedAgainst(item) {
-  const resolved = state.sessionContext?.resolvedAnswers?.[item.id];
-  if (resolved !== undefined) {
-    return resolved;
-  }
-  if (item.expectedSequence !== undefined) {
-    return item.expectedSequence;
-  }
-  if (item.expectedAnswer !== undefined) {
-    return item.expectedAnswer;
-  }
-  return item.targetItems;
-}
-
 function getQuestion(questionId) {
   return allItems().find((item) => item.id === questionId);
 }
@@ -1420,7 +1395,7 @@ function buildFocusedInstructions(question) {
     "If the patient asks to stop or end the call, respond empathetically, say you understand, say goodbye, and tell them they may use the on-screen End call button.",
     "Call set_active_question before asking the active question if it has not already been set.",
     "Call record_question_result only when the active item is complete enough to score.",
-    "For code-scored items, do NOT assign a score; report the patient's answer in the `extracted` field. For model-scored items, assign the score yourself using the item criteria and never exceed the item maximum score.",
+    "Assign the numeric score yourself using the active item's scoring notes, expected answer, accepted answers, target items, expected sequence, and observed media when available. Never exceed the item maximum score.",
     "Include brief clinician notes explaining the score.",
     "Include the exact response or behavior you relied on when available.",
     "If media was required, mention whether the camera or canvas artifact was reviewed.",
@@ -1442,22 +1417,41 @@ function focusedItemPayload(item) {
     prompt: item.prompt,
     maxScore: item.maxScore,
     capability: item.capability,
-    scoringMode: item.scoring?.mode
+    scoringNotes: item.scoringNotes || ""
   };
-  if (item.scoring?.mode === "code") {
-    payload.instruction = "Do NOT assign a score. Report the patient's answer in the `extracted` field.";
-    const knownAnswer = state.sessionContext?.resolvedAnswers?.[item.id];
-    if (knownAnswer !== undefined && item.id !== "time_season") {
-      payload.knownAnswer = knownAnswer;
-    }
-  } else {
-    payload.criteria = item.scoring?.criteria || item.acceptedAnswers || null;
+  const resolvedAnswer = state.sessionContext?.resolvedAnswers?.[item.id];
+  if (resolvedAnswer !== undefined) {
+    payload.resolvedExpectedAnswer = resolvedAnswer;
+  }
+  if (item.expectedAnswer !== undefined) {
+    payload.expectedAnswer = item.expectedAnswer;
+  }
+  if (item.expectedSequence !== undefined) {
+    payload.expectedSequence = item.expectedSequence;
+  }
+  if (item.targetItems !== undefined) {
+    payload.targetItems = item.targetItems;
+  }
+  if (item.acceptedAnswers !== undefined) {
+    payload.acceptedAnswers = item.acceptedAnswers;
+  }
+  if (item.observableSteps !== undefined) {
+    payload.observableSteps = item.observableSteps;
+  }
+  if (item.visualStimulus !== undefined) {
+    payload.visualStimulus = item.visualStimulus;
   }
   if (item.administerOnlyIf) {
     payload.administerOnlyIf = item.administerOnlyIf;
   }
   if (item.fallbackIfUnable) {
     payload.fallbackIfUnable = item.fallbackIfUnable;
+  }
+  if (item.postItemInstruction) {
+    payload.postItemInstruction = item.postItemInstruction;
+  }
+  if (item.requiresMaterials !== undefined) {
+    payload.requiresMaterials = item.requiresMaterials;
   }
   return payload;
 }

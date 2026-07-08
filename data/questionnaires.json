@@ -25,19 +25,6 @@
           "max_score": 5,
           "items": [
             {
-              "id": "time_year",
-              "type": "spoken_response",
-              "prompt": {
-                "en": "What is the year?",
-                "zh": "现在是哪一年？"
-              },
-              "max_score": 1,
-              "scoring": {
-                "type": "context_match",
-                "expected_answer": "2026"
-              }
-            },
-            {
               "id": "time_season",
               "type": "spoken_response",
               "prompt": {
@@ -45,9 +32,8 @@
                 "zh": "现在是什么季节？"
               },
               "max_score": 1,
-              "scoring": {
-                "type": "context_match"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask for the current season. In Singapore, accept wet season, dry season, or monsoon season when appropriate. Score 1 point for an acceptable answer."
             },
             {
               "id": "time_date",
@@ -56,11 +42,11 @@
                 "en": "What is today's date?",
                 "zh": "今天是几号？"
               },
-              "max_score": 1,
+              "max_score": 3,
               "scoring": {
-                "type": "context_match",
-                "expected_answer": "8"
-              }
+                "expected_answer": "8 July 2026"
+              },
+              "scoringNotes": "Ask for today's date, including day, month and year. Score 1 point for each if the answer matches the expected answer."
             },
             {
               "id": "time_day",
@@ -71,23 +57,10 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "context_match",
                 "expected_answer": "Wednesday"
-              }
-            },
-            {
-              "id": "time_month",
-              "type": "spoken_response",
-              "prompt": {
-                "en": "What month is it now?",
-                "zh": "现在是几月份？"
               },
-              "max_score": 1,
-              "scoring": {
-                "type": "context_match",
-                "expected_answer": "current_month"
-              }
-            }
+              "scoringNotes": "Ask for the day of the week. Score 1 point if the answer matches the expected answer."
+            },
           ]
         },
         {
@@ -105,10 +78,16 @@
               "visual_stimulus": "/images/naming_wristwatch.png",
               "max_score": 1,
               "scoring": {
-                "type": "manual_or_semantic_match",
-                "accepted_answers": ["watch", "wristwatch", "手表"]
+                "accepted_answers": [
+                  "watch",
+                  "wristwatch",
+                  "手表"
+                ]
               },
-              "requires_materials": ["wristwatch"]
+              "requires_materials": [
+                "wristwatch"
+              ],
+              "scoringNotes": "Show the watch image. Score 1 point if the patient identifies it as a watch or accepted equivalent."
             },
             {
               "id": "naming_pencil",
@@ -120,10 +99,15 @@
               "visual_stimulus": "/images/naming_pencil.png",
               "max_score": 1,
               "scoring": {
-                "type": "manual_or_semantic_match",
-                "accepted_answers": ["pencil", "铅笔"]
+                "accepted_answers": [
+                  "pencil",
+                  "铅笔"
+                ]
               },
-              "requires_materials": ["pencil"]
+              "requires_materials": [
+                "pencil"
+              ],
+              "scoringNotes": "Show the pencil image. Score 1 point if the patient identifies it as a pencil or accepted equivalent."
             }
           ]
         },
@@ -141,9 +125,8 @@
               },
               "expected_answer": "Everyone worked together to pull the rope tight",
               "max_score": 1,
-              "scoring": {
-                "type": "exact_or_clinician_review"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask the patient to repeat the expected phrase exactly. Allow only 1 trial. Score 1 point if the phrase is repeated accurately enough to match the expected answer."
             }
           ]
         },
@@ -160,11 +143,12 @@
                 "zh": "请您念一念这句话，并按这句话的意思去做。"
               },
               "visual_stimulus": "Close your eyes.",
-              "observable_steps": ["patient closes eyes"],
+              "observable_steps": [
+                "patient closes eyes"
+              ],
               "max_score": 1,
-              "scoring": {
-                "type": "manual_observation"
-              }
+              "scoring": {},
+              "scoringNotes": "Show the reading prompt and ask the patient to do what it says. Use camera evidence when available. Score 1 point only if the patient closes their eyes."
             }
           ]
         },
@@ -181,10 +165,11 @@
                 "zh": "请您写一个完整的句子。"
               },
               "max_score": 1,
-              "scoring": {
-                "type": "manual_review"
-              },
-              "requires_materials": ["blank paper"]
+              "scoring": {},
+              "requires_materials": [
+                "blank paper"
+              ],
+              "scoringNotes": "Ask the patient to write a sentence on the canvas. Score 1 point if it is a meaningful sentence with a subject and verb; grammar and punctuation do not need to be perfect."
             }
           ]
         },
@@ -202,9 +187,8 @@
               },
               "visual_stimulus": "/mmse_picture_copying.png",
               "max_score": 1,
-              "scoring": {
-                "type": "manual_review"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask the patient to copy the intersecting pentagons on the canvas. Score 1 point if the copy has 10 angles and 2 intersecting shapes; ignore tremor and rotation."
             }
           ]
         }
@@ -244,9 +228,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "context_match",
                 "expected_answer": "2026"
-              }
+              },
+              "scoringNotes": "Ask for the current year. Score 1 point if the answer matches the expected answer."
             },
             {
               "id": "time_season",
@@ -256,9 +240,8 @@
                 "zh": "现在是什么季节？"
               },
               "max_score": 1,
-              "scoring": {
-                "type": "context_match"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask for the current season. In Singapore, accept wet season, dry season, or monsoon season when appropriate. Score 1 point for an acceptable answer."
             },
             {
               "id": "time_date",
@@ -269,9 +252,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "context_match",
                 "expected_answer": "8"
-              }
+              },
+              "scoringNotes": "Ask for today's date. Score 1 point if the answer matches the expected answer."
             },
             {
               "id": "time_day",
@@ -282,9 +265,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "context_match",
                 "expected_answer": "Wednesday"
-              }
+              },
+              "scoringNotes": "Ask for the day of the week. Score 1 point if the answer matches the expected answer."
             },
             {
               "id": "time_month",
@@ -295,9 +278,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "context_match",
                 "expected_answer": "current_month"
-              }
+              },
+              "scoringNotes": "Ask for the current month. Score 1 point if the answer matches the expected answer."
             }
           ]
         },
@@ -315,9 +298,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "session_context_match",
                 "expected_answer": "clinic_state_or_province"
-              }
+              },
+              "scoringNotes": "Ask which state or province the patient is in. Score 1 point if the answer matches the expected clinic context."
             },
             {
               "id": "place_county",
@@ -328,9 +311,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "session_context_match",
                 "expected_answer": "clinic_county_or_district"
-              }
+              },
+              "scoringNotes": "Ask which county or district the patient is in. Score 1 point if the answer matches the expected clinic context."
             },
             {
               "id": "place_city",
@@ -341,9 +324,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "session_context_match",
                 "expected_answer": "clinic_city"
-              }
+              },
+              "scoringNotes": "Ask which town or city the patient is in. Score 1 point if the answer matches the expected clinic context."
             },
             {
               "id": "place_hospital",
@@ -354,9 +337,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "session_context_match",
                 "expected_answer": "clinic_or_hospital_name"
-              }
+              },
+              "scoringNotes": "Ask for the name of the clinic or hospital. Score 1 point if the answer matches the expected clinic context."
             },
             {
               "id": "place_floor",
@@ -367,9 +350,9 @@
               },
               "max_score": 1,
               "scoring": {
-                "type": "session_context_match",
                 "expected_answer": "clinic_floor"
-              }
+              },
+              "scoringNotes": "Ask which floor the patient is on. Score 1 point if the answer matches the expected clinic context."
             }
           ]
         },
@@ -386,15 +369,23 @@
                 "zh": "现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。"
               },
               "target_items": [
-                { "en": "ball", "zh": "皮球" },
-                { "en": "national flag", "zh": "国旗" },
-                { "en": "tree", "zh": "树木" }
+                {
+                  "en": "ball",
+                  "zh": "皮球"
+                },
+                {
+                  "en": "national flag",
+                  "zh": "国旗"
+                },
+                {
+                  "en": "tree",
+                  "zh": "树木"
+                }
               ],
               "max_score": 3,
-              "scoring": {
-                "type": "count_correct_items_first_trial"
-              },
-              "post_item_instruction": "If the patient does not repeat all three correctly, continue teaching the words until learned, up to six trials. Then say: Try to remember the words, as I will ask for them later."
+              "scoring": {},
+              "post_item_instruction": "If the patient does not repeat all three correctly, continue teaching the words until learned, up to six trials. Then say: Try to remember the words, as I will ask for them later.",
+              "scoringNotes": "Say the three target words clearly, then ask the patient to repeat them. Score the number of target words correctly repeated on the first attempt, from 0 to 3."
             }
           ]
         },
@@ -410,13 +401,18 @@
                 "en": "I would like you to count backward from 100 by sevens. Keep going until I say stop.",
                 "zh": "现在请您算一算，从100开始连续减去7，一直减7直到我说停为止。"
               },
-              "expected_sequence": [93, 86, 79, 72, 65],
+              "expected_sequence": [
+                93,
+                86,
+                79,
+                72,
+                65
+              ],
               "stop_after_responses": 5,
               "max_score": 5,
-              "scoring": {
-                "type": "count_correct_sequence_items"
-              },
-              "fallback_if_unable": "world_backwards"
+              "scoring": {},
+              "fallback_if_unable": "world_backwards",
+              "scoringNotes": "Ask the patient to count backward from 100 by sevens. Stop after 5 subtractions. Score the number of correct responses in sequence, from 0 to 5. If the patient cannot or will not attempt this, set unable true and score 0."
             },
             {
               "id": "world_backwards",
@@ -427,10 +423,9 @@
               },
               "expected_answer": "DLROW",
               "max_score": 5,
-              "scoring": {
-                "type": "letters_in_correct_order"
-              },
-              "administer_only_if": "serial_sevens_unable_or_refused"
+              "scoring": {},
+              "administer_only_if": "serial_sevens_unable_or_refused",
+              "scoringNotes": "Ask the patient to spell WORLD backwards only if serial sevens was refused or not attempted. Score the number of letters in the correct position against the expected answer, from 0 to 5."
             }
           ]
         },
@@ -448,9 +443,8 @@
               },
               "target_items_from": "registration_three_words",
               "max_score": 3,
-              "scoring": {
-                "type": "count_correct_recalled_items"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask the patient to recall the three words from the registration task. Score the number of target words correctly recalled, from 0 to 3."
             }
           ]
         },
@@ -469,10 +463,16 @@
               "visual_stimulus": "/images/naming_wristwatch.png",
               "max_score": 1,
               "scoring": {
-                "type": "manual_or_semantic_match",
-                "accepted_answers": ["watch", "wristwatch", "手表"]
+                "accepted_answers": [
+                  "watch",
+                  "wristwatch",
+                  "手表"
+                ]
               },
-              "requires_materials": ["wristwatch"]
+              "requires_materials": [
+                "wristwatch"
+              ],
+              "scoringNotes": "Show the watch image. Score 1 point if the patient identifies it as a watch or accepted equivalent."
             },
             {
               "id": "naming_pencil",
@@ -484,10 +484,15 @@
               "visual_stimulus": "/images/naming_pencil.png",
               "max_score": 1,
               "scoring": {
-                "type": "manual_or_semantic_match",
-                "accepted_answers": ["pencil", "铅笔"]
+                "accepted_answers": [
+                  "pencil",
+                  "铅笔"
+                ]
               },
-              "requires_materials": ["pencil"]
+              "requires_materials": [
+                "pencil"
+              ],
+              "scoringNotes": "Show the pencil image. Score 1 point if the patient identifies it as a pencil or accepted equivalent."
             }
           ]
         },
@@ -505,9 +510,8 @@
               },
               "expected_answer": "Everyone worked together to pull the rope tight",
               "max_score": 1,
-              "scoring": {
-                "type": "exact_or_clinician_review"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask the patient to repeat the expected phrase exactly. Allow only 1 trial. Score 1 point if the phrase is repeated accurately enough to match the expected answer."
             }
           ]
         },
@@ -529,10 +533,11 @@
                 "puts paper on the floor"
               ],
               "max_score": 3,
-              "scoring": {
-                "type": "manual_observation_per_step"
-              },
-              "requires_materials": ["blank paper"]
+              "scoring": {},
+              "requires_materials": [
+                "blank paper"
+              ],
+              "scoringNotes": "Ask the patient to complete the three-step command. Use camera evidence when available. Score 1 point for each observed completed step, from 0 to 3."
             }
           ]
         },
@@ -549,11 +554,12 @@
                 "zh": "请您念一念这句话，并按这句话的意思去做。"
               },
               "visual_stimulus": "Close your eyes.",
-              "observable_steps": ["patient closes eyes"],
+              "observable_steps": [
+                "patient closes eyes"
+              ],
               "max_score": 1,
-              "scoring": {
-                "type": "manual_observation"
-              }
+              "scoring": {},
+              "scoringNotes": "Show the reading prompt and ask the patient to do what it says. Use camera evidence when available. Score 1 point only if the patient closes their eyes."
             }
           ]
         },
@@ -570,10 +576,11 @@
                 "zh": "请您写一个完整的句子。"
               },
               "max_score": 1,
-              "scoring": {
-                "type": "manual_review"
-              },
-              "requires_materials": ["blank paper"]
+              "scoring": {},
+              "requires_materials": [
+                "blank paper"
+              ],
+              "scoringNotes": "Ask the patient to write a sentence on the canvas. Score 1 point if it is a meaningful sentence with a subject and verb; grammar and punctuation do not need to be perfect."
             }
           ]
         },
@@ -591,9 +598,8 @@
               },
               "visual_stimulus": "/mmse_picture_copying.png",
               "max_score": 1,
-              "scoring": {
-                "type": "manual_review"
-              }
+              "scoring": {},
+              "scoringNotes": "Ask the patient to copy the intersecting pentagons on the canvas. Score 1 point if the copy has 10 angles and 2 intersecting shapes; ignore tremor and rotation."
             }
           ]
         }

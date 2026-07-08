@@ -5,15 +5,6 @@ const CAPABILITY_BY_TYPE = {
   written_response: "writing"
 };
 
-const CODE_SCORING_TYPES = new Set([
-  "context_match",
-  "session_context_match",
-  "count_correct_items_first_trial",
-  "count_correct_sequence_items",
-  "letters_in_correct_order",
-  "count_correct_recalled_items"
-]);
-
 function cloneJson(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
@@ -22,12 +13,10 @@ export function deriveCapability(type) {
   return CAPABILITY_BY_TYPE[type] || "voice";
 }
 
-export function deriveScoringMode(scoringType) {
-  return CODE_SCORING_TYPES.has(scoringType) ? "code" : "model";
-}
-
 export function normalizeItem(rawItem, sectionId) {
   const scoring = rawItem.scoring || {};
+  const normalizedScoring = { ...scoring };
+  delete normalizedScoring.type;
   return {
     source: cloneJson(rawItem),
     id: String(rawItem.id),
@@ -39,7 +28,8 @@ export function normalizeItem(rawItem, sectionId) {
       zh: String(rawItem.prompt?.zh || "")
     },
     maxScore: Number(rawItem.max_score || 0),
-    scoring: { ...scoring, mode: deriveScoringMode(scoring.type) },
+    scoring: normalizedScoring,
+    scoringNotes: String(rawItem.scoringNotes || ""),
     targetItems: rawItem.target_items,
     targetItemsFrom: rawItem.target_items_from,
     expectedSequence: rawItem.expected_sequence,
