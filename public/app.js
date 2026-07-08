@@ -1,6 +1,6 @@
 import { scoreItem } from "./scoring.js";
 import { pagerPages, reportItemDetails, reportMediaArtifacts, reportPage, restoreMediaArtifacts } from "./report.js";
-import { deriveScoringMode } from "./schema.js";
+import { deriveScoringMode, hasExpectedAnswer, questionnaireById, replaceQuestionnaire } from "./schema.js";
 import { summarizeSections } from "./section-summary.js";
 import { viewForPath } from "./routes.js";
 
@@ -116,15 +116,16 @@ if (typeof document !== "undefined" && typeof window !== "undefined") {
   renderRoute();
 }
 
-async function loadQuestionnaires() {
-  const response = await fetch("/api/questionnaires");
+async function loadQuestionnaires(preferredQuestionnaireId) {
+  const selectedId = preferredQuestionnaireId || state.activeQuestionnaire?.id || state.editorQuestionnaire?.id;
+  const response = await fetch("/api/questionnaires", { cache: "no-store" });
   if (!response.ok) {
     throw new Error("Could not load questionnaires");
   }
 
   const body = await response.json();
   state.questionnaires = body.questionnaires;
-  state.activeQuestionnaire = state.questionnaires[0];
+  state.activeQuestionnaire = questionnaireById(state.questionnaires, selectedId);
   state.editorQuestionnaire = cloneQuestionnaire(state.activeQuestionnaire);
   renderQuestionnaireSelect();
   renderQuestionnaire();
@@ -905,9 +906,9 @@ function createItemEditor(item, sectionIndex, itemIndex) {
     <label>Maximum score
       <input data-item-field="maxScore" type="number" min="0" step="1" value="${escapeAttribute(item.maxScore)}">
     </label>
-    <label>Expected answer
+    ${hasExpectedAnswer(item) ? `<label>Expected answer
       <input data-item-expected-answer value="${escapeAttribute(item.expectedAnswer || "")}">
-    </label>
+    </label>` : ""}
     <p class="editor-derived">Scoring: <strong>${editorScoringMode(item)}</strong> (${escapeHtml(item.scoring?.type || "")})</p>
     <div class="row-actions">
       <button class="danger" data-remove-item type="button">Remove Item</button>
@@ -960,7 +961,6 @@ async function saveQuestionnaire() {
     state.editorQuestionnaire.id = slugify(els.editorId.value.trim() || state.editorQuestionnaire.title);
     state.editorQuestionnaire.description = els.editorDescription.value.trim();
     state.editorQuestionnaire.defaultLanguage = els.editorLanguage.value.trim();
-    const savedId = state.editorQuestionnaire.id;
 
     const response = await fetch(`/api/questionnaires/${encodeURIComponent(state.editorQuestionnaire.id)}`, {
       method: "PUT",
