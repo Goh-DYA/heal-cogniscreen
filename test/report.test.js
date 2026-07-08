@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { reportItemDetails, reportMediaArtifacts, restoreMediaArtifacts, reportPage } from "../public/report.js";
+import { reportItemDetails, reportMediaArtifacts, restoreMediaArtifacts, reportPage, reportSections } from "../public/report.js";
 
 test("reportPage returns one scored section for the selected page", () => {
   const sections = [
@@ -33,6 +33,44 @@ test("reportPage returns one scored section for the selected page", () => {
       items: sections[1].items
     }
   });
+});
+
+test("reportSections returns all scored sections for the administered items", () => {
+  const sections = [
+    {
+      title: "Orientation to Time",
+      items: [
+        { id: "time_year", maxScore: 1 },
+        { id: "time_season", maxScore: 1 },
+        { id: "time_date", maxScore: 1 }
+      ]
+    },
+    {
+      title: "Orientation to Place",
+      items: [
+        { id: "place_state", maxScore: 1 }
+      ]
+    }
+  ];
+  const responses = new Map([
+    ["time_year", { score: 1 }],
+    ["place_state", { score: 1 }]
+  ]);
+
+  assert.deepEqual(reportSections(sections, responses, new Set(["time_year", "time_date", "place_state"])), [
+    {
+      title: "Orientation to Time",
+      score: 1,
+      maxScore: 2,
+      items: [sections[0].items[0], sections[0].items[2]]
+    },
+    {
+      title: "Orientation to Place",
+      score: 1,
+      maxScore: 1,
+      items: sections[1].items
+    }
+  ]);
 });
 
 test("reportItemDetails formats model score source, answer, expected answer, and notes", () => {
