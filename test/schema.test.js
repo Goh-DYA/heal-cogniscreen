@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
-import { deriveCapability, deriveScoringMode, normalizeQuestionnaire } from "../public/schema.js";
+import { deriveCapability, deriveScoringMode, hasExpectedAnswer, normalizeQuestionnaire, questionnaireById, replaceQuestionnaire } from "../public/schema.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const raw = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json"), "utf8")).questionnaires[0];
+const rawQuestionnaires = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json"), "utf8")).questionnaires;
+const raw = rawQuestionnaires.find((questionnaire) => questionnaire.questionnaire_id === "mmse");
 
 test("deriveCapability maps types to modalities", () => {
   assert.equal(deriveCapability("object_naming"), "voice");
@@ -30,6 +31,34 @@ test("deriveScoringMode splits code vs model", () => {
   assert.equal(deriveScoringMode("manual_observation"), "model");
   assert.equal(deriveScoringMode("manual_observation_per_step"), "model");
   assert.equal(deriveScoringMode("manual_review"), "model");
+});
+
+test("hasExpectedAnswer requires a non-empty expected answer value", () => {
+  assert.equal(hasExpectedAnswer({ expectedAnswer: "current_year" }), true);
+  assert.equal(hasExpectedAnswer({ expectedAnswer: "" }), false);
+  assert.equal(hasExpectedAnswer({ expectedAnswer: undefined }), false);
+  assert.equal(hasExpectedAnswer({}), false);
+});
+
+test("questionnaireById selects by id and falls back to the first questionnaire", () => {
+  const questionnaires = [{ id: "mmse_demo" }, { id: "mmse" }];
+
+  assert.equal(questionnaireById(questionnaires, "mmse")?.id, "mmse");
+  assert.equal(questionnaireById(questionnaires, "missing")?.id, "mmse_demo");
+});
+
+test("replaceQuestionnaire updates a matching questionnaire without losing others", () => {
+  assert.deepEqual(replaceQuestionnaire(
+    [{ id: "mmse_demo", title: "Demo" }, { id: "mmse", title: "Old" }],
+    { id: "mmse", title: "Updated" }
+  ), [{ id: "mmse_demo", title: "Demo" }, { id: "mmse", title: "Updated" }]);
+});
+
+test("replaceQuestionnaire matches raw questionnaire identifiers", () => {
+  assert.deepEqual(replaceQuestionnaire(
+    [{ id: "mmse_demo", title: "Demo" }, { id: "mmse", title: "Old" }],
+    { questionnaire_id: "mmse", title: "Updated" }
+  ), [{ id: "mmse_demo", title: "Demo" }, { questionnaire_id: "mmse", title: "Updated" }]);
 });
 
 test("normalizeQuestionnaire flattens sections/items with metadata", () => {

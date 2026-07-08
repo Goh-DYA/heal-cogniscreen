@@ -26,6 +26,29 @@ export function deriveScoringMode(scoringType) {
   return CODE_SCORING_TYPES.has(scoringType) ? "code" : "model";
 }
 
+export function hasExpectedAnswer(item) {
+  const value = item?.expectedAnswer;
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+function questionnaireIdentity(questionnaire) {
+  return questionnaire?.id || questionnaire?.questionnaire_id;
+}
+
+export function questionnaireById(questionnaires, questionnaireId) {
+  return (questionnaires || []).find((item) => questionnaireIdentity(item) === questionnaireId) || questionnaires?.[0];
+}
+
+export function replaceQuestionnaire(questionnaires, questionnaire) {
+  const questionnaireId = questionnaireIdentity(questionnaire);
+  const existingIndex = (questionnaires || []).findIndex((item) => questionnaireIdentity(item) === questionnaireId);
+  if (existingIndex < 0) {
+    return [...(questionnaires || []), questionnaire];
+  }
+
+  return (questionnaires || []).map((item, index) => index === existingIndex ? questionnaire : item);
+}
+
 export function normalizeItem(rawItem, sectionId) {
   const scoring = rawItem.scoring || {};
   return {
