@@ -2,7 +2,7 @@
   "questionnaire_id": "mmse",
   "title": "MMSE Questionnaire",
   "version": "1.0",
-  "default_language": "zh",
+  "default_language": "en",
   "total_max_score": 30,
   "global_rules": {
     "administer_in_order": true,
