@@ -39,7 +39,7 @@ The app is designed around a telehealth-style workflow: a patient starts a voice
 
 - Clinician report at `/report`
   - Shows total score, per-question scores, responses, scoring notes, transcript, and submitted media artifacts.
-  - Provides a JSON report download.
+  - Provides a PDF report download.
 
 ## Architecture
 
