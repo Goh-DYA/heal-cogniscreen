@@ -51,15 +51,17 @@
               "scoringNotes": "Ask for the day of the week. Score 1 point if the answer matches the expected answer."
             },
             {
-              "id": "time_season",
+              "id": "time_time_of_day",
               "type": "spoken_response",
               "prompt": {
-                "en": "What season is it now?",
-                "zh": "现在是什么季节？"
+                "en": "What time of day is it now?",
+                "zh": "现在是上午、下午还是晚上？"
               },
               "max_score": 1,
-              "scoring": {},
-              "scoringNotes": "Ask for the current season. In Singapore, accept wet season, dry season, or monsoon season when appropriate. Score 1 point for an acceptable answer."
+              "scoring": {
+                "expected_answer":"Night"
+              },
+              "scoringNotes": "Ask for the current time of day. Score 1 point if the answer matches the expected answer."
             }
           ]
         },
@@ -233,15 +235,17 @@
               "scoringNotes": "Ask for the current year. Score 1 point if the answer matches the expected answer."
             },
             {
-              "id": "time_season",
+              "id": "time_time_of_day",
               "type": "spoken_response",
               "prompt": {
-                "en": "What season is it now?",
-                "zh": "现在是什么季节？"
+                "en": "What time of day is it now?",
+                "zh": "现在是上午、下午还是晚上？"
               },
               "max_score": 1,
-              "scoring": {},
-              "scoringNotes": "Ask for the current season. In Singapore, accept wet season, dry season, or monsoon season when appropriate. Score 1 point for an acceptable answer."
+              "scoring": {
+                "expected_answer":"Night"
+              },
+              "scoringNotes": "Ask for the current time of day. Score 1 point if the answer matches the expected answer."
             },
             {
               "id": "time_date",
