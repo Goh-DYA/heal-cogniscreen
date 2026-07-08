@@ -25,3 +25,8 @@ test("client routes ignore trailing slashes", () => {
   assert.equal(clientRoutes.viewForPath("/report/"), "report");
   assert.equal(clientRoutes.viewForPath("/log/"), "log");
 });
+
+test("image assets resolve inside the images directory", () => {
+  assert.match(serverModule.resolveImageAssetPath("/images/naming_wristwatch.png"), /images[/\\]naming_wristwatch\.png$/);
+  assert.equal(serverModule.resolveImageAssetPath("/images/../server.js"), undefined);
+});

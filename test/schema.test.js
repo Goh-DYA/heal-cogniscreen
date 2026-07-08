@@ -6,10 +6,10 @@ import { resolve, dirname } from "node:path";
 import { deriveCapability, deriveScoringMode, normalizeQuestionnaire } from "../public/schema.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const raw = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json"), "utf8"));
+const raw = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json"), "utf8")).questionnaires[0];
 
 test("deriveCapability maps types to modalities", () => {
-  assert.equal(deriveCapability("object_naming"), "camera");
+  assert.equal(deriveCapability("object_naming"), "voice");
   assert.equal(deriveCapability("physical_command"), "camera");
   assert.equal(deriveCapability("written_instruction_response"), "reading");
   assert.equal(deriveCapability("drawing_copy"), "copying");
@@ -44,7 +44,7 @@ test("normalizeQuestionnaire flattens sections/items with metadata", () => {
   assert.equal(year.sectionId, "orientation_time");
   assert.equal(year.capability, "voice");
   assert.equal(year.scoring.mode, "code");
-  assert.equal(year.expectedAnswer, "current_year");
+  assert.equal(year.expectedAnswer, year.scoring.expected_answer);
 });
 
 test("normalizeQuestionnaire preserves type-specific fields", () => {
@@ -58,7 +58,10 @@ test("normalizeQuestionnaire preserves type-specific fields", () => {
   const naming = items.find((i) => i.id === "naming_watch");
   assert.deepEqual(naming.acceptedAnswers, ["watch", "wristwatch", "手表"]);
   assert.equal(naming.scoring.mode, "model");
-  assert.equal(naming.capability, "camera");
+  assert.equal(naming.capability, "voice");
+  assert.equal(naming.visualStimulus, "/images/naming_wristwatch.png");
+  const pencil = items.find((i) => i.id === "naming_pencil");
+  assert.equal(pencil.visualStimulus, "/images/naming_pencil.png");
   const command = items.find((i) => i.id === "three_stage_command");
   assert.equal(command.capability, "camera");
   const reg = items.find((i) => i.id === "registration_three_words");

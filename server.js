@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve } from "node:path";
@@ -12,9 +13,27 @@ const serverPath = fileURLToPath(import.meta.url);
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = resolve(rootDir, "public");
 const docsDir = resolve(rootDir, "docs");
+const imagesDir = resolve(rootDir, "images");
 const dataDir = resolve(rootDir, "data");
 const questionnaireDataPath = resolve(dataDir, "questionnaires.json");
 const promptPath = resolve(rootDir, "prompts", "questionnaire-realtime.md");
+
+export function resolveImageAssetPath(pathname) {
+  if (!pathname.startsWith("/images/")) {
+    return undefined;
+  }
+
+  const imagePath = decodeURIComponent(pathname.slice("/images/".length));
+  if (imagePath.split(/[\\/]/).includes("..")) {
+    return undefined;
+  }
+  const safePath = normalize(imagePath);
+  const filePath = resolve(join(imagesDir, safePath));
+  if (filePath !== imagesDir && !filePath.startsWith(`${imagesDir}/`)) {
+    return undefined;
+  }
+  return filePath;
+}
 
 loadEnvFile(resolve(rootDir, ".env"));
 loadEnvFile(resolve(rootDir, ".env.local"));
@@ -46,18 +65,18 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === "GET" && url.pathname === "/api/questionnaires") {
-      sendJson(res, 200, { questionnaires: [loadQuestionnaire()] });
+      sendJson(res, 200, { questionnaires: loadQuestionnaires() });
       return;
     }
 
     if (req.method === "GET" && url.pathname === "/api/session-context") {
-      const questionnaire = loadQuestionnaire();
+      const questionnaire = loadQuestionnaire(url.searchParams.get("questionnaireId"));
       sendJson(res, 200, resolveSessionContext(questionnaire));
       return;
     }
 
     if (req.method === "PUT" && url.pathname.startsWith("/api/questionnaires/")) {
-      await saveQuestionnaire(req, res);
+      await saveQuestionnaire(req, res, decodeURIComponent(url.pathname.split("/").pop() || ""));
       return;
     }
 
@@ -96,8 +115,41 @@ async function createRealtimeSession(req, res, questionnaireId) {
     return;
   }
 
-  const questionnaire = loadQuestionnaire();
+  const questionnaire = loadQuestionnaire(questionnaireId);
   const context = resolveSessionContext(questionnaire);
+  const session = buildRealtimeSession(questionnaire, context);
+
+  const multipart = buildRealtimeCallsMultipart(sdp, session);
+
+  let response;
+  try {
+    response = await fetch("https://api.openai.com/v1/realtime/calls", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": multipart.contentType,
+        "OpenAI-Safety-Identifier": safetyIdentifier
+      },
+      body: multipart.body
+    });
+  } catch (error) {
+    console.error(error);
+    sendJson(res, 502, realtimeNetworkErrorBody(error));
+    return;
+  }
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    res.writeHead(response.status, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ error: "Realtime session failed", detail: responseText }));
+    return;
+  }
+
+  res.writeHead(200, { "Content-Type": "application/sdp" });
+  res.end(responseText);
+}
+
+export function buildRealtimeSession(questionnaire, context) {
   const session = {
     type: "realtime",
     model,
@@ -156,35 +208,29 @@ async function createRealtimeSession(req, res, questionnaireId) {
     };
   }
 
-  const form = new FormData();
-  form.set("sdp", sdp);
-  form.set("session", JSON.stringify(session));
+  return session;
+}
 
-  let response;
-  try {
-    response = await fetch("https://api.openai.com/v1/realtime/calls", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "OpenAI-Safety-Identifier": safetyIdentifier
-      },
-      body: form
-    });
-  } catch (error) {
-    console.error(error);
-    sendJson(res, 502, realtimeNetworkErrorBody(error));
-    return;
-  }
+export function buildRealtimeCallsMultipart(sdp, session, boundary = `----heal-realtime-${randomUUID()}`) {
+  const body = [
+    `--${boundary}`,
+    "Content-Disposition: form-data; name=\"sdp\"",
+    "Content-Type: application/sdp",
+    "",
+    sdp,
+    `--${boundary}`,
+    "Content-Disposition: form-data; name=\"session\"",
+    "Content-Type: application/json",
+    "",
+    JSON.stringify(session),
+    `--${boundary}--`,
+    ""
+  ].join("\r\n");
 
-  const responseText = await response.text();
-  if (!response.ok) {
-    res.writeHead(response.status, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ error: "Realtime session failed", detail: responseText }));
-    return;
-  }
-
-  res.writeHead(200, { "Content-Type": "application/sdp" });
-  res.end(responseText);
+  return {
+    body,
+    contentType: `multipart/form-data; boundary=${boundary}`
+  };
 }
 
 export function realtimeNetworkErrorBody(error) {
@@ -202,12 +248,22 @@ export function realtimeNetworkErrorBody(error) {
   };
 }
 
-async function saveQuestionnaire(req, res) {
+async function saveQuestionnaire(req, res, questionnaireId) {
   const body = await readJsonBody(req, 1_000_000);
   const nested = denormalizeQuestionnaire(body);
 
+  const questionnaires = loadRawQuestionnaires();
+  const existingIndex = questionnaires.findIndex(
+    (item) => item.questionnaire_id === (questionnaireId || nested.questionnaire_id)
+  );
+  if (existingIndex >= 0) {
+    questionnaires[existingIndex] = nested;
+  } else {
+    questionnaires.push(nested);
+  }
+
   mkdirSync(dirname(questionnaireDataPath), { recursive: true });
-  writeFileSync(questionnaireDataPath, `${JSON.stringify(nested, null, 2)}\n`, "utf8");
+  writeFileSync(questionnaireDataPath, `${JSON.stringify({ questionnaires }, null, 2)}\n`, "utf8");
   sendJson(res, 200, { questionnaire: normalizeQuestionnaire(nested) });
 }
 
@@ -254,13 +310,13 @@ function denormalizeItem(item) {
   output.prompt = item.prompt;
   output.max_score = Number(item.maxScore || 0);
   output.scoring = cleanScoring(item.scoring);
+  if (item.expectedAnswer !== undefined) {
+    output.scoring.expected_answer = item.expectedAnswer;
+  }
   setIfPresent(output, "target_items", item.targetItems);
   setIfPresent(output, "target_items_from", item.targetItemsFrom);
   setIfPresent(output, "expected_sequence", item.expectedSequence);
   setIfPresent(output, "stop_after_responses", item.stopAfterResponses);
-  if (item.expectedAnswer !== undefined && item.scoring?.expected_answer === undefined) {
-    output.expected_answer = item.expectedAnswer;
-  }
   setIfPresent(output, "observable_steps", item.observableSteps);
   setIfPresent(output, "visual_stimulus", item.visualStimulus);
   setIfPresent(output, "administer_only_if", item.administerOnlyIf);
@@ -270,9 +326,24 @@ function denormalizeItem(item) {
   return output;
 }
 
-function loadQuestionnaire() {
+function loadRawQuestionnaires() {
   const raw = JSON.parse(readFileSync(questionnaireDataPath, "utf8"));
-  return normalizeQuestionnaire(raw);
+  if (Array.isArray(raw?.questionnaires)) {
+    return raw.questionnaires;
+  }
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+  return raw ? [raw] : [];
+}
+
+function loadQuestionnaires() {
+  return loadRawQuestionnaires().map(normalizeQuestionnaire);
+}
+
+function loadQuestionnaire(questionnaireId) {
+  const questionnaires = loadQuestionnaires();
+  return questionnaires.find((item) => item.id === questionnaireId) || questionnaires[0];
 }
 
 export function buildInstructions(questionnaire, context) {
@@ -352,6 +423,15 @@ function resolveSessionContext(questionnaire) {
 }
 
 function serveStatic(req, res, pathname) {
+  const imagePath = resolveImageAssetPath(pathname);
+  if (imagePath && existsSync(imagePath)) {
+    res.writeHead(200, {
+      "Content-Type": contentTypes.get(extname(imagePath)) || "application/octet-stream"
+    });
+    createReadStream(imagePath).pipe(res);
+    return;
+  }
+
   if (pathname === "/mmse_picture_copying.png") {
     res.writeHead(200, { "Content-Type": "image/png" });
     createReadStream(resolve(docsDir, "mmse_picture_copying.png")).pipe(res);
