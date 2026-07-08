@@ -1,5 +1,17 @@
 export function reportPage(sections, responses, itemIds, pageIndex) {
-  const visibleSections = (sections || [])
+  const visibleSections = reportSections(sections, responses, itemIds);
+  const pageCount = visibleSections.length;
+  const currentPage = pageCount ? Math.min(Math.max(Number(pageIndex) || 0, 0), pageCount - 1) : 0;
+
+  return {
+    currentPage,
+    pageCount,
+    section: visibleSections[currentPage]
+  };
+}
+
+export function reportSections(sections, responses, itemIds) {
+  return (sections || [])
     .map((section) => {
       const items = (section.items || []).filter((item) => itemIds.has(item.id));
       return {
@@ -10,14 +22,6 @@ export function reportPage(sections, responses, itemIds, pageIndex) {
       };
     })
     .filter((section) => section.items.length > 0);
-  const pageCount = visibleSections.length;
-  const currentPage = pageCount ? Math.min(Math.max(Number(pageIndex) || 0, 0), pageCount - 1) : 0;
-
-  return {
-    currentPage,
-    pageCount,
-    section: visibleSections[currentPage]
-  };
 }
 
 export function reportItemDetails(item, response) {

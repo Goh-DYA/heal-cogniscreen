@@ -1,4 +1,5 @@
-import { pagerPages, reportItemDetails, reportMediaArtifacts, reportPage, restoreMediaArtifacts } from "./report.js";
+import { createReportPdf } from "./report-pdf.js";
+import { pagerPages, reportItemDetails, reportMediaArtifacts, reportPage, reportSections, restoreMediaArtifacts } from "./report.js";
 import { summarizeSections } from "./section-summary.js";
 import { viewForPath } from "./routes.js";
 
@@ -1191,15 +1192,50 @@ function renderLog() {
   }
 }
 
-function downloadReport() {
-  const blob = new Blob([JSON.stringify(buildReport(), null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `questionnaire-report-${new Date().toISOString().slice(0, 10)}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  setAppStatus("Report JSON downloaded.");
+async function downloadReport() {
+  const originalLabel = els.downloadReportButton.textContent;
+  els.downloadReportButton.disabled = true;
+  els.downloadReportButton.textContent = "Preparing...";
+  try {
+    const blob = await createReportPdf(buildReportDocument());
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `questionnaire-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setAppStatus("Report PDF downloaded.");
+  } catch (error) {
+    console.error(error);
+    setAppStatus("Could not download report PDF.");
+  } finally {
+    els.downloadReportButton.disabled = false;
+    els.downloadReportButton.textContent = originalLabel;
+  }
+}
+
+function buildReportDocument() {
+  const items = administeredScoringItems();
+  const itemIds = new Set(items.map((item) => item.id));
+  const maxScore = items.reduce((sum, item) => sum + Number(item.maxScore || 0), 0);
+  return {
+    title: state.activeQuestionnaire?.title || "Questionnaire report",
+    createdAt: new Date().toISOString(),
+    totalScore: scoreForItems(items),
+    maxScore,
+    status: state.lastReportSummary || `${items.filter((item) => state.responses.has(item.id)).length} of ${items.length} items recorded.`,
+    sections: reportSections(state.activeQuestionnaire?.sections, state.responses, itemIds).map((section) => ({
+      title: section.title,
+      score: section.score,
+      maxScore: section.maxScore,
+      items: section.items.map((item) => ({
+        prompt: item.prompt,
+        details: reportItemDetails(item, state.responses.get(item.id)),
+        artifacts: state.mediaArtifacts.filter((artifact) => artifact.questionId === item.id && artifact.dataUrl)
+      }))
+    })),
+    transcript: state.transcript
+  };
 }
 
 function buildReport() {
