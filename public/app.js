@@ -77,7 +77,7 @@ const state = {
   cameraStream: undefined,
   assistantMessage: undefined,
   handledToolCalls: new Set(),
-  spokenResponseIds: new Set(),
+  pendingContinuation: undefined,
   loggedInputTranscripts: new Set(),
   drawing: false,
   lastReportSummary: "",
@@ -254,14 +254,16 @@ function handleRealtimeEvent(event) {
   const payload = JSON.parse(event.data);
 
   if (payload.type === "response.output_text.delta" || payload.type === "response.text.delta" || payload.type === "response.audio_transcript.delta") {
-    if (payload.response_id) {
-      state.spokenResponseIds.add(payload.response_id);
-    }
     appendAssistantDelta(payload.delta || "");
   }
 
   if (payload.type === "response.done") {
     state.assistantMessage = undefined;
+    if (state.pendingContinuation) {
+      const instructions = state.pendingContinuation;
+      state.pendingContinuation = undefined;
+      sendRealtimeResponse(instructions);
+    }
   }
 
   if (payload.type === "conversation.item.input_audio_transcription.completed" || payload.type === "conversation.item.input_audio_transcription.segment") {
@@ -273,11 +275,11 @@ function handleRealtimeEvent(event) {
   }
 
   if (payload.type === "response.output_item.done") {
-    maybeHandleFunctionCall(payload.item, payload.response_id);
+    maybeHandleFunctionCall(payload.item);
   }
 
   if (payload.type === "response.function_call_arguments.done") {
-    maybeHandleFunctionCall(payload, payload.response_id);
+    maybeHandleFunctionCall(payload);
   }
 
   if (payload.type === "error") {
@@ -285,7 +287,7 @@ function handleRealtimeEvent(event) {
   }
 }
 
-function maybeHandleFunctionCall(item, responseId) {
+function maybeHandleFunctionCall(item) {
   const isFunctionCall = item?.type === "function_call" || item?.type === "response.function_call_arguments.done";
   if (!isFunctionCall) {
     return;
@@ -316,9 +318,8 @@ function maybeHandleFunctionCall(item, responseId) {
       }
     }));
     appendTranscript("system", `Tool complete: ${formatToolName(item.name)}.`);
-    const spokeInThisResponse = responseId ? state.spokenResponseIds.has(responseId) : false;
-    if (!output.finished && !spokeInThisResponse) {
-      sendRealtimeResponse(output.continueInstruction || "Continue the questionnaire immediately.");
+    if (!output.finished) {
+      state.pendingContinuation = output.continueInstruction || "Continue the questionnaire immediately.";
     }
   }
 }
@@ -672,6 +673,7 @@ function updateRealtimeSessionInstructions(question) {
   state.dataChannel.send(JSON.stringify({
     type: "session.update",
     session: {
+      type: "realtime",
       instructions: buildFocusedInstructions(question)
     }
   }));
@@ -972,9 +974,14 @@ async function saveQuestionnaire() {
       return;
     }
 
-    await loadQuestionnaires();
-    els.questionnaireSelect.value = savedId;
-    selectQuestionnaire();
+    const body = await response.json();
+    const savedQuestionnaire = body.questionnaire;
+    state.questionnaires = replaceQuestionnaire(state.questionnaires, savedQuestionnaire);
+    state.activeQuestionnaire = savedQuestionnaire;
+    state.editorQuestionnaire = cloneQuestionnaire(savedQuestionnaire);
+    renderQuestionnaireSelect();
+    renderQuestionnaire();
+    renderEditor();
     setAppStatus("Questionnaire saved.");
     navigate("/");
   } catch (error) {
@@ -1183,7 +1190,7 @@ function resetSessionState() {
   state.sessionStatus = "idle";
   state.lastReportSummary = "";
   state.handledToolCalls = new Set();
-  state.spokenResponseIds = new Set();
+  state.pendingContinuation = undefined;
   state.loggedInputTranscripts = new Set();
   state.sessionContext = { resolvedAnswers: {} };
   state.fallbackUnlocked = new Set();
