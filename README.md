@@ -1,6 +1,13 @@
-# Heal Realtime Questionnaire
+# CogniScreen
 
-**Administer medical questionnaires over an AI voice call.** A patient joins a telehealth-style call, talks through one question at a time with an OpenAI Realtime voice assistant, uses camera and canvas tools for observation and drawing tasks, and a clinician reviews a scored report afterward. The bundled questionnaire is the Mini-Mental State Examination (MMSE).
+**CogniScreen administers medical questionnaires over an AI voice call using the OpenAI Realtime API.** 
+
+Scenario: A patient joins a telehealth-style call, talks through one question at a time with an OpenAI Realtime voice assistant, uses camera and canvas tools for observation and drawing tasks, and a clinician reviews a scored report afterward. The bundled questionnaire is the Mini-Mental State Examination (MMSE).
+
+**Team Name**: HEAL
+- Adison Goh
+- Jace Han
+- Gary Ang
 
 ## Demo
 
@@ -49,9 +56,17 @@ cp .env.example .env.local
 
 ```text
 OPENAI_API_KEY=...
-REALTIME_MODEL=gpt-realtime-2.1-mini   # optional, this is the default
-REALTIME_VOICE=marin                   # optional, this is the default
+REALTIME_MODEL=gpt-realtime-2.1-mini                    # optional, this is the default
+REALTIME_VOICE=marin                                    # optional, this is the default
+REALTIME_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe      # optional, this is the default
+OPENAI_SAFETY_IDENTIFIER=local-questionnaire-demo        # optional, this is the default
 
+# Clinic identity used to score MMSE orientation-to-place items (all optional, default to Singapore)
+CLINIC_STATE_OR_PROVINCE=Singapore
+CLINIC_COUNTY_OR_DISTRICT=Singapore
+CLINIC_CITY=Singapore
+CLINIC_OR_HOSPITAL_NAME=Tan Tock Seng Hospital
+CLINIC_FLOOR=3
 ```
 
 The key is read from the process environment, then `.env`, then `.env.local`.
@@ -84,6 +99,7 @@ The bundled questionnaire lives in `data/questionnaires.json` as a nested `secti
 
 - `GET /health` — server status, configured model, and whether an API key was found.
 - `GET /api/questionnaires` — all available questionnaires.
+- `GET /api/session-context?questionnaireId=...` — clinic identity and current date facts used to build the model's Realtime instructions.
 - `PUT /api/questionnaires/:id` — create or update a questionnaire.
 - `POST /api/realtime/session?questionnaireId=...` — accepts a WebRTC SDP offer (`application/sdp`), creates a Realtime session, and returns the SDP answer.
 
@@ -91,6 +107,10 @@ The bundled questionnaire lives in `data/questionnaires.json` as a nested `secti
 
 - `server.js` — dependency-free Node HTTP server: static hosting, questionnaire API, Realtime session brokering.
 - `public/app.js` — browser state machine: routing, WebRTC, Realtime events, tool-call handling, progress, camera, canvas, admin, report.
+- `public/routes.js` — route table shared by client and server for page/static routing.
+- `public/schema.js` — normalizes raw questionnaire JSON into the app's internal shape.
+- `public/report.js` / `public/report-pdf.js` — clinician report data shaping and PDF export.
+- `public/section-summary.js` — section progress and score aggregation.
 - `public/index.html` / `public/styles.css` — single-page shell and clinical UI.
 - `prompts/questionnaire-realtime.md` — system instructions for voice administration, probing, scoring, and tool behavior.
 - `data/questionnaires.json` — questionnaire content.
