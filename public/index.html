@@ -7,20 +7,27 @@
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
-    <div class="app-shell">
+    <div class="app-shell" id="appShell">
       <aside class="sidebar" aria-label="Primary">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true">H</div>
-          <div>
-            <p class="eyebrow">Heal</p>
-            <h1>Questionnaire</h1>
+        <div class="sidebar-header">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">H</div>
+            <div class="brand-text">
+              <p class="eyebrow">Heal</p>
+              <h1>Questionnaire</h1>
+            </div>
           </div>
+          <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-expanded="true" aria-label="Collapse sidebar" title="Collapse sidebar">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
         </div>
         <nav>
-          <a href="/" data-route="patient">Patient call</a>
-          <a href="/admin" data-route="admin">Admin editor</a>
-          <a href="/report" data-route="report">Clinician report</a>
-          <a href="/log" data-route="log">Dialogue log</a>
+          <a href="/" data-route="patient"><span class="nav-mark" aria-hidden="true">P</span><span class="nav-label">Patient call</span></a>
+          <a href="/admin" data-route="admin"><span class="nav-mark" aria-hidden="true">A</span><span class="nav-label">Admin editor</span></a>
+          <a href="/report" data-route="report"><span class="nav-mark" aria-hidden="true">R</span><span class="nav-label">Clinician report</span></a>
+          <a href="/log" data-route="log"><span class="nav-mark" aria-hidden="true">L</span><span class="nav-label">Dialogue log</span></a>
         </nav>
         <div class="session-summary">
           <p class="label">Realtime status</p>
@@ -52,14 +59,11 @@
 
           <section class="call-layout">
             <div class="call-stage">
-              <div class="avatar-panel">
-                <div class="avatar-portrait" aria-hidden="true">
-                  <span>AI</span>
-                </div>
-                <div>
-                  <p class="label">Current question</p>
-                  <h3 id="activeQuestionTitle">Not started</h3>
-                  <p id="activeQuestionText">Start the questionnaire when the patient is ready.</p>
+              <div class="call-screen" id="callScreen" aria-live="polite">
+                <img src="/call-placeholder.png" alt="Online questionnaire call participant placeholder">
+                <div class="call-screen-overlay">
+                  <span class="ai-speaking-dot" aria-hidden="true"></span>
+                  <span id="callScreenStatus">AI assistant standby</span>
                 </div>
               </div>
 
@@ -85,14 +89,25 @@
                 <button class="danger" id="finishButton" type="button" disabled title="End the call and keep the report available">End call</button>
               </div>
 
-              <div class="transcript" id="transcript" aria-live="polite"></div>
+              <section class="dialogue-panel collapsed" id="dialoguePanel" aria-label="Questionnaire messages">
+                <button class="dialogue-toggle" id="transcriptToggle" type="button" aria-expanded="false" aria-controls="transcript" aria-label="Show messages" title="Show messages">
+                  <span id="transcriptToggleText">Show messages</span>
+                  <span id="transcriptCount">0 messages</span>
+                </button>
+                <div class="transcript" id="transcript" aria-live="polite"></div>
+              </section>
             </div>
 
             <div class="task-panel">
+              <section class="active-question-card">
+                <p class="label">Current question</p>
+                <h3 id="activeQuestionTitle">Not started</h3>
+                <p id="activeQuestionText">Start the questionnaire when the patient is ready.</p>
+              </section>
+
               <div class="progress-block">
                 <div class="progress-row">
-                  <span id="progressText">0 of 0 complete</span>
-                  <span id="scoreText">0 / 0</span>
+                  <span id="progressText">0 of 0 sections complete</span>
                 </div>
                 <div class="progress-track"><div id="progressFill"></div></div>
               </div>

@@ -12,19 +12,26 @@ const completionFarewellInstruction = [
 ].join(" ");
 
 const els = typeof document !== "undefined" ? {
+  appShell: document.querySelector("#appShell"),
   appStatus: document.querySelector("#appStatus"),
   connectionStatus: document.querySelector("#connectionStatus"),
+  sidebarToggle: document.querySelector("#sidebarToggle"),
   questionnaireSelect: document.querySelector("#questionnaireSelect"),
   startButton: document.querySelector("#startButton"),
   microphoneButton: document.querySelector("#microphoneButton"),
   finishButton: document.querySelector("#finishButton"),
   resetProgressButton: document.querySelector("#resetProgressButton"),
   reportButton: document.querySelector("#reportButton"),
+  callScreen: document.querySelector("#callScreen"),
+  callScreenStatus: document.querySelector("#callScreenStatus"),
   activeQuestionTitle: document.querySelector("#activeQuestionTitle"),
   activeQuestionText: document.querySelector("#activeQuestionText"),
+  dialoguePanel: document.querySelector("#dialoguePanel"),
+  transcriptToggle: document.querySelector("#transcriptToggle"),
+  transcriptToggleText: document.querySelector("#transcriptToggleText"),
+  transcriptCount: document.querySelector("#transcriptCount"),
   transcript: document.querySelector("#transcript"),
   progressText: document.querySelector("#progressText"),
-  scoreText: document.querySelector("#scoreText"),
   progressFill: document.querySelector("#progressFill"),
   questionList: document.querySelector("#questionList"),
   cameraBlock: document.querySelector("#cameraBlock"),
@@ -74,10 +81,14 @@ const state = {
   microphoneMuted: false,
   cameraStream: undefined,
   assistantMessage: undefined,
+  assistantSpeaking: false,
+  sidebarCollapsed: false,
+  transcriptExpanded: false,
   handledToolCalls: new Set(),
   spokenResponseIds: new Set(),
   loggedInputTranscripts: new Set(),
   drawing: false,
+  lastCanvasQuestionId: undefined,
   lastReportSummary: "",
   reportPageIndex: 0,
   editorSectionPage: 0,
@@ -86,6 +97,7 @@ const state = {
 };
 
 if (typeof document !== "undefined" && typeof window !== "undefined") {
+  els.sidebarToggle.addEventListener("click", toggleSidebar);
   els.startButton.addEventListener("click", startQuestionnaire);
   els.microphoneButton.addEventListener("click", toggleMicrophone);
   els.finishButton.addEventListener("click", () => {
@@ -98,6 +110,7 @@ if (typeof document !== "undefined" && typeof window !== "undefined") {
     navigate("/report");
   });
   els.questionnaireSelect.addEventListener("change", selectQuestionnaire);
+  els.transcriptToggle.addEventListener("click", toggleTranscript);
   els.adminQuestionnaireSelect.addEventListener("change", selectEditorQuestionnaire);
   els.cameraButton.addEventListener("click", startCamera);
   els.snapshotButton.addEventListener("click", sendCameraSnapshot);
@@ -109,9 +122,52 @@ if (typeof document !== "undefined" && typeof window !== "undefined") {
   els.downloadReportButton.addEventListener("click", downloadReport);
   window.addEventListener("popstate", renderRoute);
 
+  renderSidebarState();
+  renderTranscriptPanel();
+  setAssistantSpeaking(false);
   setupCanvas();
   await loadQuestionnaires();
   renderRoute();
+}
+
+function toggleSidebar() {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  renderSidebarState();
+}
+
+function renderSidebarState() {
+  els.appShell.classList.toggle("sidebar-collapsed", state.sidebarCollapsed);
+  els.sidebarToggle.setAttribute("aria-expanded", String(!state.sidebarCollapsed));
+  els.sidebarToggle.setAttribute("aria-label", state.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar");
+  els.sidebarToggle.title = state.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar";
+}
+
+function toggleTranscript() {
+  state.transcriptExpanded = !state.transcriptExpanded;
+  renderTranscriptPanel();
+}
+
+function renderTranscriptPanel() {
+  const count = state.transcript.length;
+  const countLabel = `${count} message${count === 1 ? "" : "s"}`;
+  const actionLabel = state.transcriptExpanded ? "Hide messages" : "Show messages";
+  const label = `${actionLabel}, ${countLabel}`;
+  els.transcriptToggleText.textContent = actionLabel;
+  els.transcriptCount.textContent = countLabel;
+  els.transcriptToggle.setAttribute("aria-label", label);
+  els.transcriptToggle.title = label;
+  els.transcriptToggle.setAttribute("aria-expanded", String(state.transcriptExpanded));
+  els.dialoguePanel.classList.toggle("expanded", state.transcriptExpanded);
+  els.dialoguePanel.classList.toggle("collapsed", !state.transcriptExpanded);
+  if (state.transcriptExpanded) {
+    els.transcript.scrollTop = els.transcript.scrollHeight;
+  }
+}
+
+function setAssistantSpeaking(isSpeaking) {
+  state.assistantSpeaking = isSpeaking;
+  els.callScreen.classList.toggle("ai-speaking", isSpeaking);
+  els.callScreenStatus.textContent = isSpeaking ? "AI assistant speaking" : "AI assistant standby";
 }
 
 async function loadQuestionnaires() {
@@ -251,15 +307,21 @@ function beginRealtimeAdministration() {
 function handleRealtimeEvent(event) {
   const payload = JSON.parse(event.data);
 
+  if (payload.type === "response.audio.delta" || payload.type === "output_audio_buffer.started") {
+    setAssistantSpeaking(true);
+  }
+
   if (payload.type === "response.output_text.delta" || payload.type === "response.text.delta" || payload.type === "response.audio_transcript.delta") {
     if (payload.response_id) {
       state.spokenResponseIds.add(payload.response_id);
     }
+    setAssistantSpeaking(true);
     appendAssistantDelta(payload.delta || "");
   }
 
-  if (payload.type === "response.done") {
+  if (payload.type === "response.done" || payload.type === "response.audio.done" || payload.type === "output_audio_buffer.stopped") {
     state.assistantMessage = undefined;
+    setAssistantSpeaking(false);
   }
 
   if (payload.type === "conversation.item.input_audio_transcription.completed" || payload.type === "conversation.item.input_audio_transcription.segment") {
@@ -279,6 +341,7 @@ function handleRealtimeEvent(event) {
   }
 
   if (payload.type === "error") {
+    setAssistantSpeaking(false);
     appendTranscript("system", payload.error?.message || "Realtime API returned an error.");
   }
 }
@@ -472,17 +535,17 @@ function setActiveQuestionFromTool(questionId) {
 
 function renderQuestionnaire() {
   const items = administeredScoringItems();
-  const completeCount = items.filter((item) => state.responses.has(item.id)).length;
-  const maxScore = items.reduce((sum, item) => sum + Number(item.maxScore || 0), 0);
-  const score = scoreForItems(items);
-  const progress = items.length ? Math.round((completeCount / items.length) * 100) : 0;
+  const itemIds = new Set(items.map((item) => item.id));
+  const sections = summarizeSections(state.activeQuestionnaire?.sections, state.responses, state.activeQuestionId, itemIds)
+    .filter((section) => section.itemCount > 0);
+  const completeCount = sections.filter((section) => section.isComplete).length;
+  const progress = sections.length ? Math.round((completeCount / sections.length) * 100) : 0;
 
-  els.progressText.textContent = `${completeCount} of ${items.length} complete`;
-  els.scoreText.textContent = `Final score: ${score} / ${maxScore}`;
+  els.progressText.textContent = `${completeCount} of ${sections.length} sections complete`;
   els.progressFill.style.width = `${progress}%`;
   els.questionList.innerHTML = "";
 
-  for (const section of summarizeSections(state.activeQuestionnaire?.sections, state.responses, state.activeQuestionId)) {
+  for (const section of sections) {
     const listItem = document.createElement("li");
     listItem.className = "section-card";
     listItem.style.setProperty("--section-progress", `${section.progress}%`);
@@ -495,10 +558,9 @@ function renderQuestionnaire() {
     listItem.innerHTML = `
       <div>
         <h4>${escapeHtml(section.title)}</h4>
-        <p>${section.completeCount} of ${section.itemCount} items complete</p>
+        <p>${escapeHtml(sectionStatusText(section))}</p>
       </div>
       <div class="section-metrics">
-        <span class="section-score">${section.score}/${section.maxScore}</span>
         <span class="section-progress" aria-label="${section.progress}% complete">
           <span>${section.progress}%</span>
         </span>
@@ -515,22 +577,35 @@ function renderQuestionnaire() {
   renderReport();
 }
 
+function sectionStatusText(section) {
+  if (section.isComplete) {
+    return "Complete";
+  }
+  if (section.isActive) {
+    return `${section.completeCount} of ${section.itemCount} questions done`;
+  }
+  return "Pending";
+}
+
 function renderModality(questionOrCapability) {
   const question = typeof questionOrCapability === "object" ? questionOrCapability : undefined;
   const capability = question?.capability || questionOrCapability || "";
+  const isCanvasTask = ["writing", "copying"].includes(capability);
   els.cameraBlock.hidden = !["camera", "reading"].includes(capability);
-  els.canvasBlock.hidden = !["writing", "copying"].includes(capability);
+  els.canvasBlock.hidden = !isCanvasTask;
   els.readingBlock.hidden = capability !== "reading";
   els.copyingReference.hidden = capability !== "copying";
   renderVisualStimulus(question);
   resetTaskFeedback(capability);
+  resetCanvasForNewQuestion(question, isCanvasTask);
 }
 
 function renderVisualStimulus(question) {
-  const stimulus = imageVisualStimulus(question?.visualStimulus);
+  const stimulus = question?.type === "object_naming" ? imageVisualStimulus(question.visualStimulus) : "";
   els.visualStimulusBlock.hidden = !stimulus;
   if (!stimulus) {
     els.visualStimulusImage.removeAttribute("src");
+    els.visualStimulusImage.removeAttribute("alt");
     return;
   }
 
@@ -540,6 +615,21 @@ function renderVisualStimulus(question) {
 
 function imageVisualStimulus(value) {
   return typeof value === "string" && value.startsWith("/images/") ? value : "";
+}
+
+function resetCanvasForNewQuestion(question, isCanvasTask) {
+  if (!isCanvasTask) {
+    return;
+  }
+
+  const questionId = question?.id || "";
+  if (state.lastCanvasQuestionId === questionId) {
+    return;
+  }
+
+  state.lastCanvasQuestionId = questionId;
+  state.drawing = false;
+  clearCanvas();
 }
 
 async function startCamera() {
@@ -716,6 +806,7 @@ function finishQuestionnaire(status, summary) {
 }
 
 function endRealtimeConnection() {
+  setAssistantSpeaking(false);
   state.dataChannel?.close();
   state.peerConnection?.close();
   if (state.localAudioStream) {
@@ -1146,6 +1237,7 @@ function restoreReport() {
       state.responses = new Map((report.responses || []).map((response) => [response.questionId, response]));
       state.fallbackUnlocked = new Set(report.fallbackUnlocked || []);
       state.mediaArtifacts = restoreMediaArtifacts(report.mediaArtifacts);
+      renderPatientTranscript();
       renderQuestionnaire();
       renderLog();
     }
@@ -1181,9 +1273,13 @@ function resetSessionState() {
   state.loggedInputTranscripts = new Set();
   state.sessionContext = { resolvedAnswers: {} };
   state.fallbackUnlocked = new Set();
+  state.lastCanvasQuestionId = undefined;
+  state.transcriptExpanded = false;
   els.transcript.innerHTML = "";
   els.activeQuestionTitle.textContent = "Not started";
   els.activeQuestionText.textContent = "Start the questionnaire when the patient is ready.";
+  renderTranscriptPanel();
+  setAssistantSpeaking(false);
 }
 
 function appendInputTranscript(id, text) {
@@ -1227,10 +1323,22 @@ function appendTranscript(role, text) {
   els.transcript.append(item);
   els.transcript.scrollTop = els.transcript.scrollHeight;
   state.transcript.push({ role, text, at: new Date().toISOString() });
+  renderTranscriptPanel();
   renderReport();
   persistReport("");
   renderLog();
   return item;
+}
+
+function renderPatientTranscript() {
+  els.transcript.innerHTML = "";
+  for (const entry of state.transcript) {
+    const item = document.createElement("div");
+    item.className = `utterance ${entry.role}`;
+    item.textContent = entry.text;
+    els.transcript.append(item);
+  }
+  renderTranscriptPanel();
 }
 
 function navigate(path) {
@@ -1381,6 +1489,11 @@ function buildReadinessIntroductionInstructions(instructions) {
 function buildFocusedInstructions(question) {
   const items = administeredScoringItems();
   const completedCount = items.filter((item) => state.responses.has(item.id)).length;
+  const objectNamingInstructions = question?.type === "object_naming" ? [
+    "For this object-naming item, ask the patient to look at the image on screen and tell you what the item is.",
+    "Do not say accepted answers, expected answers, object labels, filenames, material names, or scoring examples aloud.",
+    "Use answer-bearing metadata only after the patient responds, and only for scoring."
+  ] : [];
   return [
     "You are a clinical questionnaire assistant administering a medical screening questionnaire by voice.",
     "You are not diagnosing, treating, or giving medical advice.",
@@ -1402,6 +1515,7 @@ function buildFocusedInstructions(question) {
     "Include brief clinician notes explaining the score.",
     "Include the exact response or behavior you relied on when available.",
     "If media was required, mention whether the camera or canvas artifact was reviewed.",
+    ...objectNamingInstructions,
     "",
     `Selected questionnaire: ${state.activeQuestionnaire?.title || ""}`,
     `Questionnaire ID: ${state.activeQuestionnaire?.id || ""}`,
@@ -1413,14 +1527,19 @@ function buildFocusedInstructions(question) {
 
 function focusedItemPayload(item) {
   const section = (state.activeQuestionnaire?.sections || []).find((entry) => entry.id === item.sectionId);
+  const isObjectNaming = item.type === "object_naming";
   const payload = {
     questionId: item.id,
     section: section?.title || item.sectionId,
     type: item.type,
-    prompt: item.prompt,
+    prompt: isObjectNaming
+      ? { ...item.prompt, en: "Please look at the image on screen and tell me what this item is." }
+      : item.prompt,
     maxScore: item.maxScore,
     capability: item.capability,
-    scoringNotes: item.scoringNotes || ""
+    scoringNotes: isObjectNaming
+      ? "Ask the patient to name the visible item without naming it for them. After the patient responds, score against scoringOnlyAcceptedAnswers."
+      : item.scoringNotes || ""
   };
   const resolvedAnswer = state.sessionContext?.resolvedAnswers?.[item.id];
   if (resolvedAnswer !== undefined) {
@@ -1435,13 +1554,15 @@ function focusedItemPayload(item) {
   if (item.targetItems !== undefined) {
     payload.targetItems = item.targetItems;
   }
-  if (item.acceptedAnswers !== undefined) {
+  if (item.acceptedAnswers !== undefined && isObjectNaming) {
+    payload.scoringOnlyAcceptedAnswers = item.acceptedAnswers;
+  } else if (item.acceptedAnswers !== undefined) {
     payload.acceptedAnswers = item.acceptedAnswers;
   }
   if (item.observableSteps !== undefined) {
     payload.observableSteps = item.observableSteps;
   }
-  if (item.visualStimulus !== undefined) {
+  if (item.visualStimulus !== undefined && !isObjectNaming) {
     payload.visualStimulus = item.visualStimulus;
   }
   if (item.administerOnlyIf) {
@@ -1453,7 +1574,7 @@ function focusedItemPayload(item) {
   if (item.postItemInstruction) {
     payload.postItemInstruction = item.postItemInstruction;
   }
-  if (item.requiresMaterials !== undefined) {
+  if (item.requiresMaterials !== undefined && !isObjectNaming) {
     payload.requiresMaterials = item.requiresMaterials;
   }
   return payload;
