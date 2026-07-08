@@ -476,7 +476,8 @@ main {
 
 video,
 canvas,
-.copying-reference {
+.copying-reference,
+.visual-stimulus-block img {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -502,6 +503,13 @@ canvas {
 
 .copying-reference img {
   max-width: 280px;
+}
+
+.visual-stimulus-block img {
+  display: block;
+  max-height: 260px;
+  object-fit: contain;
+  padding: 12px;
 }
 
 .reading-card {
@@ -825,6 +833,10 @@ canvas {
 
 .response-row strong {
   color: var(--ink);
+}
+
+.report-artifact-label {
+  margin-top: 4px;
 }
 
 .report-artifact {

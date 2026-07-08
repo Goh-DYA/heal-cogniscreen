@@ -1,5 +1,5 @@
 import { scoreItem } from "./scoring.js";
-import { pagerPages, reportItemDetails, reportPage } from "./report.js";
+import { pagerPages, reportItemDetails, reportMediaArtifacts, reportPage, restoreMediaArtifacts } from "./report.js";
 import { deriveScoringMode } from "./schema.js";
 import { summarizeSections } from "./section-summary.js";
 import { viewForPath } from "./routes.js";
@@ -34,6 +34,8 @@ const els = typeof document !== "undefined" ? {
   cameraPreview: document.querySelector("#cameraPreview"),
   snapshotButton: document.querySelector("#snapshotButton"),
   cameraStatus: document.querySelector("#cameraStatus"),
+  visualStimulusBlock: document.querySelector("#visualStimulusBlock"),
+  visualStimulusImage: document.querySelector("#visualStimulusImage"),
   canvasBlock: document.querySelector("#canvasBlock"),
   clearCanvasButton: document.querySelector("#clearCanvasButton"),
   sendCanvasButton: document.querySelector("#sendCanvasButton"),
@@ -430,7 +432,7 @@ function setActiveQuestion(questionId) {
   state.activeQuestionId = question.id;
   els.activeQuestionTitle.textContent = question.sectionId;
   els.activeQuestionText.textContent = question.prompt.en;
-  renderModality(question.capability);
+  renderModality(question);
   setAppStatus(`Active task: ${question.sectionId}.`);
   renderQuestionnaire();
   updateRealtimeSessionInstructions(question);
@@ -521,12 +523,31 @@ function renderQuestionnaire() {
   renderReport();
 }
 
-function renderModality(capability) {
+function renderModality(questionOrCapability) {
+  const question = typeof questionOrCapability === "object" ? questionOrCapability : undefined;
+  const capability = question?.capability || questionOrCapability || "";
   els.cameraBlock.hidden = !["camera", "reading"].includes(capability);
   els.canvasBlock.hidden = !["writing", "copying"].includes(capability);
   els.readingBlock.hidden = capability !== "reading";
   els.copyingReference.hidden = capability !== "copying";
+  renderVisualStimulus(question);
   resetTaskFeedback(capability);
+}
+
+function renderVisualStimulus(question) {
+  const stimulus = imageVisualStimulus(question?.visualStimulus);
+  els.visualStimulusBlock.hidden = !stimulus;
+  if (!stimulus) {
+    els.visualStimulusImage.removeAttribute("src");
+    return;
+  }
+
+  els.visualStimulusImage.src = stimulus;
+  els.visualStimulusImage.alt = question.prompt?.en || "Item to name";
+}
+
+function imageVisualStimulus(value) {
+  return typeof value === "string" && value.startsWith("/images/") ? value : "";
 }
 
 async function startCamera() {
@@ -882,6 +903,9 @@ function createItemEditor(item, sectionIndex, itemIndex) {
     <label>Maximum score
       <input data-item-field="maxScore" type="number" min="0" step="1" value="${escapeAttribute(item.maxScore)}">
     </label>
+    <label>Expected answer
+      <input data-item-expected-answer value="${escapeAttribute(item.expectedAnswer || "")}">
+    </label>
     <p class="editor-derived">Scoring: <strong>${editorScoringMode(item)}</strong> (${escapeHtml(item.scoring?.type || "")})</p>
     <div class="row-actions">
       <button class="danger" data-remove-item type="button">Remove Item</button>
@@ -896,6 +920,8 @@ function createItemEditor(item, sectionIndex, itemIndex) {
       editing.maxScore = Number(target.value);
     } else if (target.dataset.itemField) {
       editing[target.dataset.itemField] = target.value;
+    } else if (target.dataset.itemExpectedAnswer !== undefined) {
+      editing.expectedAnswer = target.value;
     } else if (target.dataset.itemPrompt) {
       editing.prompt = editing.prompt || {};
       editing.prompt[target.dataset.itemPrompt] = target.value;
@@ -1045,7 +1071,14 @@ function renderReportSection(section) {
       <p><strong>Patient's Answer:</strong> ${escapeHtml(details.patientAnswer)}</p>
       <p>${escapeHtml(details.aiText)}</p>
     `;
-    for (const artifact of state.mediaArtifacts.filter((artifact) => artifact.questionId === item.id)) {
+    const artifacts = state.mediaArtifacts.filter((artifact) => artifact.questionId === item.id && artifact.dataUrl);
+    if (artifacts.length) {
+      const label = document.createElement("p");
+      label.className = "report-artifact-label";
+      label.innerHTML = "<strong>Submitted image:</strong>";
+      row.append(label);
+    }
+    for (const artifact of artifacts) {
       const image = document.createElement("img");
       image.src = artifact.dataUrl;
       image.alt = `${artifact.type} artifact for ${item.sectionId}`;
@@ -1092,10 +1125,7 @@ function buildReport() {
     responses: [...state.responses.values()],
     fallbackUnlocked: [...state.fallbackUnlocked],
     transcript: state.transcript,
-    mediaArtifacts: state.mediaArtifacts.map(({ dataUrl, ...artifact }) => ({
-      ...artifact,
-      hasImageData: Boolean(dataUrl)
-    })),
+    mediaArtifacts: reportMediaArtifacts(state.mediaArtifacts),
     createdAt: new Date().toISOString()
   };
 }
@@ -1121,6 +1151,7 @@ function restoreReport() {
       state.transcript = report.transcript || [];
       state.responses = new Map((report.responses || []).map((response) => [response.questionId, response]));
       state.fallbackUnlocked = new Set(report.fallbackUnlocked || []);
+      state.mediaArtifacts = restoreMediaArtifacts(report.mediaArtifacts);
       renderQuestionnaire();
       renderLog();
     }

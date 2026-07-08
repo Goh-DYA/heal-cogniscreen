@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { codeEvidenceLines, reportItemDetails, reportPage } from "../public/report.js";
+import { codeEvidenceLines, reportItemDetails, reportMediaArtifacts, restoreMediaArtifacts, reportPage } from "../public/report.js";
 
 test("codeEvidenceLines includes extracted answer and matched context", () => {
   const lines = codeEvidenceLines({
@@ -68,4 +68,46 @@ test("reportItemDetails formats scored-by, answer, expected answer, and notes", 
     expectedAnswer: "2026",
     aiText: "Patient responded with the year 2026."
   });
+});
+
+test("reportMediaArtifacts keeps image data so report rows can display submitted copying images", () => {
+  assert.deepEqual(reportMediaArtifacts([
+    {
+      questionId: "copying_pentagons",
+      type: "copying",
+      dataUrl: "data:image/png;base64,abc123",
+      createdAt: "2026-07-08T03:00:00.000Z"
+    }
+  ]), [
+    {
+      questionId: "copying_pentagons",
+      type: "copying",
+      dataUrl: "data:image/png;base64,abc123",
+      hasImageData: true,
+      createdAt: "2026-07-08T03:00:00.000Z"
+    }
+  ]);
+});
+
+test("restoreMediaArtifacts returns only saved artifacts with image data", () => {
+  assert.deepEqual(restoreMediaArtifacts([
+    {
+      questionId: "copying_pentagons",
+      type: "copying",
+      dataUrl: "data:image/png;base64,abc123",
+      hasImageData: true
+    },
+    {
+      questionId: "naming_watch",
+      type: "camera",
+      hasImageData: true
+    }
+  ]), [
+    {
+      questionId: "copying_pentagons",
+      type: "copying",
+      dataUrl: "data:image/png;base64,abc123",
+      hasImageData: true
+    }
+  ]);
 });

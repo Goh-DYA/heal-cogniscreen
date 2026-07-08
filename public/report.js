@@ -46,6 +46,17 @@ export function reportItemDetails(item, response) {
   };
 }
 
+export function reportMediaArtifacts(mediaArtifacts) {
+  return (mediaArtifacts || []).map((artifact) => ({
+    ...artifact,
+    hasImageData: Boolean(artifact.dataUrl)
+  }));
+}
+
+export function restoreMediaArtifacts(mediaArtifacts) {
+  return (mediaArtifacts || []).filter((artifact) => Boolean(artifact.dataUrl));
+}
+
 export function pagerPages(pageCount, currentPage) {
   if (pageCount <= 0) {
     return [];
