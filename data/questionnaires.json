@@ -60,7 +60,7 @@
                 "expected_answer": "Wednesday"
               },
               "scoringNotes": "Ask for the day of the week. Score 1 point if the answer matches the expected answer."
-            },
+            }
           ]
         },
         {
