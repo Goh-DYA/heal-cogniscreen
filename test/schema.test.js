@@ -10,6 +10,7 @@ const raw = JSON.parse(readFileSync(resolve(here, "../data/questionnaires.json")
 
 test("deriveCapability maps types to modalities", () => {
   assert.equal(deriveCapability("object_naming"), "camera");
+  assert.equal(deriveCapability("physical_command"), "camera");
   assert.equal(deriveCapability("written_instruction_response"), "reading");
   assert.equal(deriveCapability("drawing_copy"), "copying");
   assert.equal(deriveCapability("written_response"), "writing");
@@ -57,6 +58,9 @@ test("normalizeQuestionnaire preserves type-specific fields", () => {
   const naming = items.find((i) => i.id === "naming_watch");
   assert.deepEqual(naming.acceptedAnswers, ["watch", "wristwatch", "手表"]);
   assert.equal(naming.scoring.mode, "model");
+  assert.equal(naming.capability, "camera");
+  const command = items.find((i) => i.id === "three_stage_command");
+  assert.equal(command.capability, "camera");
   const reg = items.find((i) => i.id === "registration_three_words");
   assert.equal(reg.targetItems.length, 3);
 });

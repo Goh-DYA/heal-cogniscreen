@@ -1,5 +1,6 @@
 const CAPABILITY_BY_TYPE = {
   object_naming: "camera",
+  physical_command: "camera",
   written_instruction_response: "reading",
   drawing_copy: "copying",
   written_response: "writing"

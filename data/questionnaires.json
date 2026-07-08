@@ -11,6 +11,12 @@
     "record_audio_transcript": true,
     "separate_spoken_prompt_from_scoring_notes": true
   },
+  "materials_required": [
+    "wristwatch",
+    "pencil",
+    "blank paper",
+    "intersecting pentagons image"
+  ],
   "sections": [
     {
       "id": "orientation_time",
@@ -24,12 +30,10 @@
             "en": "What is the year?",
             "zh": "现在是哪一年？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "context_match",
-            "expected_answer": "current_year",
-            "score_if_correct": 1
+            "expected_answer": "current_year"
           }
         },
         {
@@ -39,12 +43,10 @@
             "en": "What season is it now?",
             "zh": "现在是什么季节？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "context_match",
-            "expected_answer": "current_season",
-            "score_if_correct": 1
+            "expected_answer": "current_season"
           }
         },
         {
@@ -54,12 +56,10 @@
             "en": "What is today's date?",
             "zh": "今天是几号？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "context_match",
-            "expected_answer": "current_date",
-            "score_if_correct": 1
+            "expected_answer": "current_date"
           }
         },
         {
@@ -69,12 +69,10 @@
             "en": "What day of the week is it today?",
             "zh": "今天是星期几？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "context_match",
-            "expected_answer": "current_day_of_week",
-            "score_if_correct": 1
+            "expected_answer": "current_day_of_week"
           }
         },
         {
@@ -84,12 +82,10 @@
             "en": "What month is it now?",
             "zh": "现在是几月份？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "context_match",
-            "expected_answer": "current_month",
-            "score_if_correct": 1
+            "expected_answer": "current_month"
           }
         }
       ]
@@ -106,7 +102,6 @@
             "en": "What state or province are we in now?",
             "zh": "我们现在是在哪一个省？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "session_context_match",
@@ -120,7 +115,6 @@
             "en": "What county or district are we in now?",
             "zh": "我们现在是在哪一个县？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "session_context_match",
@@ -134,7 +128,6 @@
             "en": "What town or city are we in now?",
             "zh": "我们现在是在哪一个城市？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "session_context_match",
@@ -145,10 +138,9 @@
           "id": "place_hospital",
           "type": "spoken_response",
           "prompt": {
-            "en": "What is the name of this hospital?",
+            "en": "What is the name of this clinic or hospital?",
             "zh": "这家医院的名称是什么？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "session_context_match",
@@ -162,7 +154,6 @@
             "en": "What floor are we on now?",
             "zh": "现在我们是在第几楼？"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
             "type": "session_context_match",
@@ -180,36 +171,19 @@
           "id": "registration_three_words",
           "type": "spoken_memory_encoding",
           "prompt": {
-            "en": "Now I will name you three things. After I finish, please repeat them. Ball, national flag, tree.",
+            "en": "Now I will name three things. After I finish, please repeat them: ball, national flag, tree.",
             "zh": "现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。"
           },
-          "pause_for_reply": true,
           "target_items": [
-            {
-              "en": "ball",
-              "zh": "皮球"
-            },
-            {
-              "en": "national flag",
-              "zh": "国旗"
-            },
-            {
-              "en": "tree",
-              "zh": "树木"
-            }
+            { "en": "ball", "zh": "皮球" },
+            { "en": "national flag", "zh": "国旗" },
+            { "en": "tree", "zh": "树木" }
           ],
-          "max_trials": 6,
-          "score_first_trial_only": true,
           "max_score": 3,
-          "post_item_instruction": {
-            "en": "Try to remember the words, as I will ask for them in a little while.",
-            "zh": "请您记住这几个词，等一下我还会再问您。"
-          },
           "scoring": {
-            "type": "count_correct_items_first_trial",
-            "record_number_of_trials": true,
-            "if_not_learned_all_items": "recall_not_meaningfully_testable"
-          }
+            "type": "count_correct_items_first_trial"
+          },
+          "post_item_instruction": "If the patient does not repeat all three correctly, continue teaching the words until learned, up to six trials. Then say: Try to remember the words, as I will ask for them later."
         }
       ]
     },
@@ -222,32 +196,30 @@
           "id": "serial_sevens",
           "type": "spoken_calculation_sequence",
           "prompt": {
-            "en": "I would like you to count backward from 100 by sevens.",
+            "en": "I would like you to count backward from 100 by sevens. Keep going until I say stop.",
             "zh": "现在请您算一算，从100开始连续减去7，一直减7直到我说停为止。"
           },
-          "pause_for_reply": true,
           "expected_sequence": [93, 86, 79, 72, 65],
           "stop_after_responses": 5,
           "max_score": 5,
-          "fallback_if_unable": "world_backwards",
           "scoring": {
             "type": "count_correct_sequence_items"
-          }
+          },
+          "fallback_if_unable": "world_backwards"
         },
         {
           "id": "world_backwards",
           "type": "spoken_spelling",
           "prompt": {
             "en": "Please spell the word WORLD backwards.",
-            "zh": "请您把英文单词 WORLD 倒过来拼出来。"
+            "zh": "请您把英文单词 WORLD 倒着拼出来。"
           },
-          "pause_for_reply": true,
-          "administer_only_if": "serial_sevens_unable_or_refused",
           "expected_answer": "DLROW",
           "max_score": 5,
           "scoring": {
             "type": "letters_in_correct_order"
-          }
+          },
+          "administer_only_if": "serial_sevens_unable_or_refused"
         }
       ]
     },
@@ -263,8 +235,7 @@
             "en": "Earlier I told you the names of three things. Can you tell me what those were?",
             "zh": "刚才我告诉过您三种东西的名称。现在请您说出那三种东西是什么吗？"
           },
-          "pause_for_reply": true,
-          "target_items_from": "registration.registration_three_words.target_items",
+          "target_items_from": "registration_three_words",
           "max_score": 3,
           "scoring": {
             "type": "count_correct_recalled_items"
@@ -284,13 +255,13 @@
             "en": "Could you name this item?",
             "zh": "请问这是什么？"
           },
-          "display_or_show": "wristwatch",
-          "pause_for_reply": true,
+          "visual_stimulus": "Show the patient a wristwatch.",
           "max_score": 1,
           "scoring": {
             "type": "manual_or_semantic_match",
             "accepted_answers": ["watch", "wristwatch", "手表"]
-          }
+          },
+          "requires_materials": ["wristwatch"]
         },
         {
           "id": "naming_pencil",
@@ -299,13 +270,13 @@
             "en": "Could you name this item?",
             "zh": "请问这是什么？"
           },
-          "display_or_show": "pencil",
-          "pause_for_reply": true,
+          "visual_stimulus": "Show the patient a pencil.",
           "max_score": 1,
           "scoring": {
             "type": "manual_or_semantic_match",
             "accepted_answers": ["pencil", "铅笔"]
-          }
+          },
+          "requires_materials": ["pencil"]
         }
       ]
     },
@@ -321,12 +292,10 @@
             "en": "Repeat the phrase: Everyone worked together to pull the rope tight.",
             "zh": "请您跟我说：大家齐心协力拉紧绳。"
           },
-          "pause_for_reply": true,
-          "allowed_trials": 1,
+          "expected_answer": "Everyone worked together to pull the rope tight",
           "max_score": 1,
           "scoring": {
-            "type": "exact_or_clinician_review",
-            "score_values": [0, 1]
+            "type": "exact_or_clinician_review"
           }
         }
       ]
@@ -337,34 +306,22 @@
       "max_score": 3,
       "items": [
         {
-          "id": "three_stage_command_full",
+          "id": "three_stage_command",
           "type": "physical_command",
           "prompt": {
             "en": "Take the paper in your right hand, fold it in half, and put it on the floor.",
             "zh": "请用您的右手拿这张纸，把它折成对半，然后将纸放在地上。"
           },
-          "pause_for_reply": true,
           "observable_steps": [
-            {
-              "id": "takes_paper_right_hand",
-              "description": "Takes paper in right hand",
-              "max_score": 1
-            },
-            {
-              "id": "folds_in_half",
-              "description": "Folds paper in half",
-              "max_score": 1
-            },
-            {
-              "id": "puts_on_floor",
-              "description": "Puts paper on floor",
-              "max_score": 1
-            }
+            "takes paper in right hand",
+            "folds paper in half",
+            "puts paper on the floor"
           ],
           "max_score": 3,
           "scoring": {
             "type": "manual_observation_per_step"
-          }
+          },
+          "requires_materials": ["blank paper"]
         }
       ]
     },
@@ -374,21 +331,17 @@
       "max_score": 1,
       "items": [
         {
-          "id": "read_and_obey",
+          "id": "reading_close_eyes",
           "type": "written_instruction_response",
           "prompt": {
             "en": "Please read this and do what it says.",
             "zh": "请您念一念这句话，并按这句话的意思去做。"
           },
-          "visual_stimulus": {
-            "text": "Close your eyes.",
-            "zh_text": "请闭上眼睛。"
-          },
-          "pause_for_reply": true,
+          "visual_stimulus": "Close your eyes.",
+          "observable_steps": ["patient closes eyes"],
           "max_score": 1,
           "scoring": {
-            "type": "manual_observation",
-            "score_if": "patient_closes_eyes"
+            "type": "manual_observation"
           }
         }
       ]
@@ -399,23 +352,17 @@
       "max_score": 1,
       "items": [
         {
-          "id": "write_sentence",
+          "id": "writing_sentence",
           "type": "written_response",
           "prompt": {
             "en": "Make up and write a sentence about anything.",
             "zh": "请您写一个完整的句子。"
           },
-          "pause_for_reply": true,
           "max_score": 1,
           "scoring": {
-            "type": "manual_review",
-            "criteria": [
-              "sentence is spontaneous",
-              "sentence contains subject and verb",
-              "sentence makes sense",
-              "grammar and punctuation are not required"
-            ]
-          }
+            "type": "manual_review"
+          },
+          "requires_materials": ["blank paper"]
         }
       ]
     },
@@ -425,26 +372,16 @@
       "max_score": 1,
       "items": [
         {
-          "id": "copy_intersecting_pentagons",
+          "id": "copying_pentagons",
           "type": "drawing_copy",
           "prompt": {
             "en": "Please copy this picture.",
             "zh": "请您照着这个样子把它画下来。"
           },
-          "visual_stimulus": {
-            "asset_path": "./mmse_picture_copying.png",
-            "description": "two intersecting pentagons"
-          },
-          "pause_for_reply": true,
+          "visual_stimulus": "/mmse_picture_copying.png",
           "max_score": 1,
           "scoring": {
-            "type": "manual_review",
-            "criteria": [
-              "all 10 angles are present",
-              "2 pentagons intersect",
-              "ignore tremor",
-              "ignore rotation"
-            ]
+            "type": "manual_review"
           }
         }
       ]
