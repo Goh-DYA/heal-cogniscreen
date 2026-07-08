@@ -315,7 +315,7 @@ function maybeHandleFunctionCall(item, responseId) {
     }));
     appendTranscript("system", `Tool complete: ${formatToolName(item.name)}.`);
     const spokeInThisResponse = responseId ? state.spokenResponseIds.has(responseId) : false;
-    if (!output.finished && !spokeInThisResponse) {
+    if (!output.finished && (!spokeInThisResponse || output.advancedToNextQuestion)) {
       sendRealtimeResponse(output.continueInstruction || "Continue the questionnaire immediately.");
     }
   }
@@ -340,7 +340,8 @@ function handleToolCall(name, args) {
       ok: result.ok,
       error: result.error,
       recordedQuestionId: result.recordedQuestionId || null,
-      nextQuestionId: getNextIncompleteQuestion()?.id || null,
+      nextQuestionId: result.nextQuestionId || null,
+      advancedToNextQuestion: Boolean(result.advancedToNextQuestion),
       progress: progressSnapshot(),
       continueInstruction: result.continueInstruction
     };
@@ -406,8 +407,10 @@ function recordResponse(args) {
   return {
     ok: true,
     recordedQuestionId: question.id,
+    nextQuestionId: nextQuestion?.id || null,
+    advancedToNextQuestion: Boolean(nextQuestion),
     continueInstruction: nextQuestion
-      ? `The active question has been updated to questionId "${nextQuestion.id}". Ask only the active section from the current session instructions.`
+      ? `The active question has been updated to questionId "${nextQuestion.id}". Immediately begin guiding the patient through this active question using the current session instructions. Do not stop after a transition phrase or wait for patient confirmation before asking the question.`
       : completionFarewellInstruction
   };
 }
