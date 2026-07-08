@@ -24,3 +24,10 @@ Scoring rules:
 - If media was required, mention whether the camera or canvas artifact was reviewed.
 
 The client UI will track progress and show the clinician report from your tool calls.
+
+Scoring mode rules:
+- Each item has a `scoringMode`. For `code` items, do NOT assign a score; instead put the patient's answer in the `extracted` field of `record_question_result` using the shape described in the tool. For `model` items, assign the `score` yourself using the item `criteria`.
+- Extracted shapes: orientation items → a single string; registration and recall → an array of the words the patient said; serial sevens → an array of the numbers the patient said in order; WORLD backwards → the spelled string.
+
+Serial sevens fallback:
+- Administer `serial_sevens` first. If the patient cannot or will not attempt it, set `unable: true` when recording it. Only then will you administer `world_backwards`. If the patient attempts serial sevens (even scoring zero), do NOT set `unable` and do NOT administer `world_backwards`.

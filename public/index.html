@@ -132,7 +132,7 @@
                 <p class="reading-card">Close your eyes.</p>
               </div>
 
-              <ol class="question-list" id="questionList"></ol>
+              <ol class="section-list" id="questionList"></ol>
             </div>
           </section>
         </section>
@@ -165,11 +165,11 @@
             </label>
             <label>
               Language
-              <input id="editorLanguage">
+              <input id="editorLanguage" placeholder="English, Chinese">
             </label>
           </form>
           <div class="editor-toolbar">
-            <button class="secondary" id="addQuestionButton" type="button" title="Add a question row to the editor">Add question</button>
+            <button class="secondary" id="addSectionButton" type="button" title="Add a section to the editor">Add section</button>
           </div>
           <div class="question-editor-list" id="questionEditorList"></div>
         </section>
@@ -189,7 +189,10 @@
               <p id="reportStatus">No completed questionnaire yet.</p>
             </article>
             <article>
-              <h3>Responses</h3>
+              <div class="report-article-header">
+                <h3>Responses</h3>
+                <div class="report-pagination" id="reportPagination"></div>
+              </div>
               <div id="reportResponses"></div>
             </article>
             <article>

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "mmse",
+    "title": "Mini-Mental State Examination",
+    "description": "Screening questionnaire for cognitive impairment and dementia risk.",
+    "language": "English and Chinese",
+    "questions": [
+      {
+        "id": "mmse-q1",
+        "section": "Orientation to Time",
+        "question": "\"What is the year? Season? Date? Day of the week? Month?\"",
+        "questionChinese": "\"现在是哪一年? 现在是什么季节？今天是几号？今天是星期几？现在是几月份\"",
+        "scoringNotes": "Ask for the date, then specifically ask for any omitted parts, such as: \"Can you also tell me what season it is?\" Score 1 point for each correct answer.",
+        "maxScore": 5,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q2",
+        "section": "Orientation to Place",
+        "question": "\"Where are we now: State? County? Town/city? Hospital? Floor?\"",
+        "questionChinese": "\"我们现在是在哪一个省？我们现在是在哪一个县？我们现在是在哪一个城市? 这家医院的名称是什么？现在我们是在第几楼？\"",
+        "scoringNotes": "Ask in turn for each location component, such as: \"Can you tell me the name of this hospital?\" Repeat for town/city, county, state, and floor as applicable. Score 1 point for each correct answer.",
+        "maxScore": 5,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q3",
+        "section": "Registration",
+        "question": "\"Now I will name you three things. After I finish, please repeat them. Ball, national flag, tree. \"",
+        "questionChinese": "\"现在我告诉您三种东西的名称，我说完后请您重复一遍。皮球，国旗，树木。\"",
+        "scoringNotes": "Say the three unrelated objects clearly and slowly, allowing approximately 1 second for each. After all three have been said, ask the patient to repeat them. The number of objects correctly named on the first repetition determines the score, from 0–3. If the patient does not repeat all three correctly the first time, continue saying the names until the patient can repeat all three items, up to 6 trials. Record the number of trials: ______. If the patient does not eventually learn all three, recall cannot be meaningfully tested. After this task, tell the patient: \"Try to remember the words, as I will ask for them in a little while.\"",
+        "maxScore": 3,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q4",
+        "section": "Attention and Calculation",
+        "question": "\"I would like you to count backward from 100 by sevens.\"",
+        "questionChinese": "\"现在请您算一算，从100开始连续減去7，一直減7直到我說停為止。\"",
+        "scoringNotes": "Ask the patient to begin with 100 and count backward by sevens. Stop after 5 subtractions. Expected sequence: 93, 86, 79, 72, 65. Score the total number of correct answers. If the patient cannot or will not perform the subtraction task, ask the patient to spell \"WORLD\" backwards. Score based on the number of letters in correct order, for example: DLROW = 5, DLORW = 3.",
+        "maxScore": 5,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q5",
+        "section": "Recall",
+        "question": "\"Earlier I told you the names of three things. Can you tell me what those were?\"",
+        "questionChinese": "\"刚才我告诉过您三种东西的名称。现在请您说出那三种东西是什么吗？\"",
+        "scoringNotes": "Ask the patient to recall the three words previously given during the Registration task. Score the total number of correct answers, from 0–3.",
+        "maxScore": 3,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q6",
+        "section": "Naming",
+        "question": "\"Could you name this item?\"",
+        "questionChinese": "\"请问这是什么？\"",
+        "scoringNotes": "Show the patient a wristwatch and ask what it is. Repeat with a pencil. Score 1 point for each correctly named object, from 0–2.",
+        "maxScore": 2,
+        "capability": "camera"
+      },
+      {
+        "id": "mmse-q7",
+        "section": "Repetition",
+        "question": "\"Repeat the phrase: 'Everyone worked together to pull the rope tight.'\"",
+        "questionChinese": "\"请您跟我说。'大家齐心协力拉紧绳'\"",
+        "scoringNotes": "Ask the patient to repeat the sentence exactly. Allow only 1 trial. Score 0 or 1.",
+        "maxScore": 1,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q8",
+        "section": "Three-Stage Command",
+        "question": "\"Take the paper in your right hand, fold it in half, and put it on the floor.\"",
+        "questionChinese": "\"请用您的右手拿這張紙，把它折成对半，然后将纸放在地上。\"",
+        "scoringNotes": "Give the patient a piece of blank paper and state the full command. Score 1 point for each correctly executed part: takes paper in right hand, folds it in half, and puts it on the floor.",
+        "maxScore": 3,
+        "capability": "camera"
+      },
+      {
+        "id": "mmse-q9",
+        "section": "Reading",
+        "question": "\"Please read this and do what it says.\"",
+        "questionChinese": "\"请您念一念这句话，并按这句话的意思去做。\"",
+        "scoringNotes": "On a blank piece of paper, print: Close your eyes. Use letters large enough for the patient to see clearly. Ask the patient to read the sentence and do what it says. Score 1 point only if the patient actually closes their eyes. This is not a memory test, so the examiner may prompt the patient to \"do what it says\" after the patient reads the sentence.",
+        "maxScore": 1,
+        "capability": "reading"
+      },
+      {
+        "id": "mmse-q10",
+        "section": "Writing",
+        "question": "\"Make up and write a sentence about anything.\"",
+        "questionChinese": "\"请您写一个完整的句子。\"",
+        "scoringNotes": "Give the patient a blank piece of paper and ask them to write a sentence. Do not dictate a sentence; it should be written spontaneously. The sentence must contain a subject and a verb and must make sense. Correct grammar and punctuation are not required.",
+        "maxScore": 1,
+        "capability": "writing"
+      },
+      {
+        "id": "mmse-q11",
+        "section": "Copying",
+        "question": "\"Please copy this picture.\"",
+        "questionChinese": "\"请您照着这个样子把它画下来。\"",
+        "scoringNotes": "Show the patient the picture of two intersecting pentagons (refer to ./mmse_picture_copying.png) and ask them to copy the figure exactly as it is. All 10 angles must be present, and 2 must intersect, to score 1 point. Ignore tremor and rotation.",
+        "maxScore": 1,
+        "capability": "copying"
+      }
+    ]
+  },
+  {
+    "id": "mmse-short",
+    "title": "MMSE (Short)",
+    "description": "Screening questionnaire for cognitive impairment and dementia risk.",
+    "language": "English and Chinese",
+    "questions": [
+      {
+        "id": "mmse-q1",
+        "section": "Orientation to Time",
+        "question": "\"What is the year? Season? Date? Day of the week? Month?\"",
+        "questionChinese": "\"现在是哪一年? 现在是什么季节？今天是几号？今天是星期几？现在是几月份\"",
+        "scoringNotes": "Ask for the date, then specifically ask for any omitted parts, such as: \"Can you also tell me what season it is?\" Score 1 point for each correct answer.",
+        "maxScore": 5,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q7",
+        "section": "Repetition",
+        "question": "\"Repeat the phrase: 'Everyone worked together to pull the rope tight.'\"",
+        "questionChinese": "\"请您跟我说。'大家齐心协力拉紧绳'\"",
+        "scoringNotes": "Ask the patient to repeat the sentence exactly. Allow only 1 trial. Score 0 or 1.",
+        "maxScore": 1,
+        "capability": "voice"
+      },
+      {
+        "id": "mmse-q8",
+        "section": "Three-Stage Command",
+        "question": "\"Take the paper in your right hand, fold it in half, and put it on the floor.\"",
+        "questionChinese": "\"请用您的右手拿這張紙，把它折成对半，然后将纸放在地上。\"",
+        "scoringNotes": "Give the patient a piece of blank paper and state the full command. Score 1 point for each correctly executed part: takes paper in right hand, folds it in half, and puts it on the floor.",
+        "maxScore": 3,
+        "capability": "camera"
+      },
+      {
+        "id": "mmse-q9",
+        "section": "Reading",
+        "question": "\"Please read this and do what it says.\"",
+        "questionChinese": "\"请您念一念这句话，并按这句话的意思去做。\"",
+        "scoringNotes": "On a blank piece of paper, print: Close your eyes. Use letters large enough for the patient to see clearly. Ask the patient to read the sentence and do what it says. Score 1 point only if the patient actually closes their eyes. This is not a memory test, so the examiner may prompt the patient to \"do what it says\" after the patient reads the sentence.",
+        "maxScore": 1,
+        "capability": "reading"
+      },
+      {
+        "id": "mmse-q11",
+        "section": "Copying",
+        "question": "\"Please copy this picture.\"",
+        "questionChinese": "\"请您照着这个样子把它画下来。\"",
+        "scoringNotes": "Show the patient the picture of two intersecting pentagons (refer to ./mmse_picture_copying.png) and ask them to copy the figure exactly as it is. All 10 angles must be present, and 2 must intersect, to score 1 point. Ignore tremor and rotation.",
+        "maxScore": 1,
+        "capability": "copying"
+      }
+    ]
+  }
+]

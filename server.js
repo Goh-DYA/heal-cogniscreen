@@ -1,9 +1,14 @@
-import { randomUUID } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { resolveStaticRoutePath } from "./public/routes.js";
+import { normalizeQuestionnaire } from "./public/schema.js";
+
+export { resolveStaticRoutePath } from "./public/routes.js";
+
+const serverPath = fileURLToPath(import.meta.url);
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = resolve(rootDir, "public");
 const docsDir = resolve(rootDir, "docs");
@@ -41,12 +46,18 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === "GET" && url.pathname === "/api/questionnaires") {
-      sendJson(res, 200, { questionnaires: loadQuestionnaires() });
+      sendJson(res, 200, { questionnaires: [loadQuestionnaire()] });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/session-context") {
+      const questionnaire = loadQuestionnaire();
+      sendJson(res, 200, resolveSessionContext(questionnaire));
       return;
     }
 
     if (req.method === "PUT" && url.pathname.startsWith("/api/questionnaires/")) {
-      await saveQuestionnaire(req, res, decodeURIComponent(url.pathname.split("/").pop() || ""));
+      await saveQuestionnaire(req, res);
       return;
     }
 
@@ -67,9 +78,11 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
-  console.log(`Heal Realtime Questionnaire listening at http://localhost:${port}`);
-});
+if (process.argv[1] && resolve(process.argv[1]) === serverPath) {
+  server.listen(port, () => {
+    console.log(`Heal Realtime Questionnaire listening at http://localhost:${port}`);
+  });
+}
 
 async function createRealtimeSession(req, res, questionnaireId) {
   if (!apiKey) {
@@ -83,11 +96,12 @@ async function createRealtimeSession(req, res, questionnaireId) {
     return;
   }
 
-  const questionnaire = loadQuestionnaires().find((item) => item.id === questionnaireId) || loadQuestionnaires()[0];
+  const questionnaire = loadQuestionnaire();
+  const context = resolveSessionContext(questionnaire);
   const session = {
     type: "realtime",
     model,
-    instructions: buildInstructions(questionnaire),
+    instructions: buildInstructions(questionnaire, context),
     audio: {
       output: {
         voice
@@ -103,13 +117,18 @@ async function createRealtimeSession(req, res, questionnaireId) {
           additionalProperties: false,
           properties: {
             questionId: { type: "string" },
-            score: { type: "number" },
-            maxScore: { type: "number" },
+            extracted: {
+              description: "Structured patient answer for code-scored items. String for orientation; array of spoken words for registration/recall; array of numbers for serial sevens; the spelled string for WORLD backwards.",
+              type: ["string", "array", "number", "null"],
+              items: { type: ["string", "number"] }
+            },
+            score: { type: ["number", "null"], description: "Only used for model-scored items; ignored for code-scored items." },
             response: { type: "string" },
             notes: { type: "string" },
-            complete: { type: "boolean" }
+            complete: { type: "boolean" },
+            unable: { type: "boolean", description: "Set true only when the patient cannot or will not attempt serial-7s, to trigger the WORLD-backwards fallback." }
           },
-          required: ["questionId", "score", "maxScore", "response", "notes", "complete"]
+          required: ["questionId", "response", "notes", "complete"]
         }
       },
       {
@@ -141,14 +160,21 @@ async function createRealtimeSession(req, res, questionnaireId) {
   form.set("sdp", sdp);
   form.set("session", JSON.stringify(session));
 
-  const response = await fetch("https://api.openai.com/v1/realtime/calls", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "OpenAI-Safety-Identifier": safetyIdentifier
-    },
-    body: form
-  });
+  let response;
+  try {
+    response = await fetch("https://api.openai.com/v1/realtime/calls", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "OpenAI-Safety-Identifier": safetyIdentifier
+      },
+      body: form
+    });
+  } catch (error) {
+    console.error(error);
+    sendJson(res, 502, realtimeNetworkErrorBody(error));
+    return;
+  }
 
   const responseText = await response.text();
   if (!response.ok) {
@@ -161,137 +187,168 @@ async function createRealtimeSession(req, res, questionnaireId) {
   res.end(responseText);
 }
 
-async function saveQuestionnaire(req, res, questionnaireId) {
-  const body = await readJsonBody(req, 1_000_000);
-  const nextQuestionnaire = normalizeQuestionnaire({ ...body, id: questionnaireId || body.id });
-  const questionnaires = loadQuestionnaires();
-  const existingIndex = questionnaires.findIndex((item) => item.id === nextQuestionnaire.id);
-
-  if (existingIndex >= 0) {
-    questionnaires[existingIndex] = nextQuestionnaire;
-  } else {
-    questionnaires.push(nextQuestionnaire);
+export function realtimeNetworkErrorBody(error) {
+  const cause = error?.cause;
+  if (cause?.code === "ENOTFOUND" && cause.hostname === "api.openai.com") {
+    return {
+      error: "OpenAI network unavailable",
+      detail: "Could not resolve api.openai.com. Check your internet connection, DNS, VPN, proxy, or firewall settings."
+    };
   }
+
+  return {
+    error: "OpenAI network unavailable",
+    detail: "Could not reach the OpenAI Realtime API. Check your internet connection, VPN, proxy, or firewall settings."
+  };
+}
+
+async function saveQuestionnaire(req, res) {
+  const body = await readJsonBody(req, 1_000_000);
+  const nested = denormalizeQuestionnaire(body);
 
   mkdirSync(dirname(questionnaireDataPath), { recursive: true });
-  writeFileSync(questionnaireDataPath, `${JSON.stringify(questionnaires, null, 2)}\n`, "utf8");
-  sendJson(res, 200, { questionnaire: nextQuestionnaire });
+  writeFileSync(questionnaireDataPath, `${JSON.stringify(nested, null, 2)}\n`, "utf8");
+  sendJson(res, 200, { questionnaire: normalizeQuestionnaire(nested) });
 }
 
-function loadQuestionnaires() {
-  if (existsSync(questionnaireDataPath)) {
-    return JSON.parse(readFileSync(questionnaireDataPath, "utf8")).map(normalizeQuestionnaire);
+function cloneJson(value) {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+
+function cleanScoring(scoring) {
+  const cleaned = { ...(scoring || {}) };
+  delete cleaned.mode;
+  return cleaned;
+}
+
+function setIfPresent(target, key, value) {
+  if (value !== undefined) {
+    target[key] = value;
   }
-  return [loadMmseQuestionnaire()];
 }
 
-function loadMmseQuestionnaire() {
-  const sourcePath = resolve(docsDir, "mmse_en_zh.md");
-  const source = readFileSync(sourcePath, "utf8");
-  const questions = [];
-  let rowIndex = 0;
+export function denormalizeQuestionnaire(model) {
+  return {
+    questionnaire_id: model.id,
+    title: model.title,
+    version: model.version || "1.0",
+    default_language: model.defaultLanguage || "",
+    total_max_score: (model.sections || [])
+      .flatMap((section) => section.items || [])
+      .reduce((sum, item) => sum + Number(item.maxScore || 0), 0),
+    global_rules: model.globalRules || {},
+    materials_required: model.materialsRequired || [],
+    sections: (model.sections || []).map((section) => ({
+      id: section.id,
+      title: section.title,
+      max_score: (section.items || []).reduce((sum, item) => sum + Number(item.maxScore || 0), 0),
+      items: (section.items || []).map(denormalizeItem)
+    }))
+  };
+}
 
-  for (const line of source.split(/\r?\n/)) {
-    if (!line.startsWith("|") || line.includes("---") || line.includes("Section | Question")) {
-      continue;
-    }
-
-    const cells = splitMarkdownTableRow(line);
-    if (cells.length < 5 || cells[0].includes("**Total**")) {
-      continue;
-    }
-
-    rowIndex += 1;
-    questions.push(normalizeQuestion({
-      id: `mmse-q${rowIndex}`,
-      section: stripMarkdown(cells[0]),
-      question: stripMarkdown(cells[1]),
-      questionChinese: stripMarkdown(cells[2]),
-      scoringNotes: stripMarkdown(cells[3]),
-      maxScore: Number(stripMarkdown(cells[4])) || 0,
-      capability: inferCapability(cells[0], cells[1], cells[3])
-    }));
+function denormalizeItem(item) {
+  const output = cloneJson(item.source) || {};
+  output.id = item.id;
+  output.type = item.type;
+  output.prompt = item.prompt;
+  output.max_score = Number(item.maxScore || 0);
+  output.scoring = cleanScoring(item.scoring);
+  setIfPresent(output, "target_items", item.targetItems);
+  setIfPresent(output, "target_items_from", item.targetItemsFrom);
+  setIfPresent(output, "expected_sequence", item.expectedSequence);
+  setIfPresent(output, "stop_after_responses", item.stopAfterResponses);
+  if (item.expectedAnswer !== undefined && item.scoring?.expected_answer === undefined) {
+    output.expected_answer = item.expectedAnswer;
   }
-
-  return normalizeQuestionnaire({
-    id: "mmse",
-    title: "Mini-Mental State Examination",
-    description: "Screening questionnaire for cognitive impairment and dementia risk.",
-    language: "English and Chinese",
-    questions
-  });
+  setIfPresent(output, "observable_steps", item.observableSteps);
+  setIfPresent(output, "visual_stimulus", item.visualStimulus);
+  setIfPresent(output, "administer_only_if", item.administerOnlyIf);
+  setIfPresent(output, "fallback_if_unable", item.fallbackIfUnable);
+  setIfPresent(output, "post_item_instruction", item.postItemInstruction);
+  setIfPresent(output, "requires_materials", item.requiresMaterials);
+  return output;
 }
 
-function buildInstructions(questionnaire) {
+function loadQuestionnaire() {
+  const raw = JSON.parse(readFileSync(questionnaireDataPath, "utf8"));
+  return normalizeQuestionnaire(raw);
+}
+
+export function buildInstructions(questionnaire, context) {
   return [
     baseInstructions,
     "",
     `Selected questionnaire: ${questionnaire.title}`,
     `Questionnaire ID: ${questionnaire.id}`,
-    "The client UI is the source of truth for the active section.",
-    "Question details will be provided through session updates.",
-    "Use only the active question details from the latest session instructions."
+    `Today (Asia/Singapore): ${context.dateFacts.current_day_of_week}, ${context.dateFacts.current_date} ${context.dateFacts.current_month} ${context.dateFacts.current_year}`,
+    `Clinic: ${context.clinic.clinic_or_hospital_name}, floor ${context.clinic.clinic_floor}, ${context.clinic.clinic_city}, state/province ${context.clinic.clinic_state_or_province}, county/district ${context.clinic.clinic_county_or_district}`,
+    "The client UI is the source of truth for the active item.",
+    "Item details will be provided through session updates.",
+    "Use only the active item details from the latest session instructions."
   ].join("\n");
 }
 
-function normalizeQuestionnaire(questionnaire) {
-  const id = String(questionnaire.id || slugify(questionnaire.title || "questionnaire"));
+const SEASON_ACCEPTED = ["wet", "ne monsoon", "dry", "sw monsoon"];
+
+function clinicConfig() {
   return {
-    id,
-    title: String(questionnaire.title || "Untitled questionnaire"),
-    description: String(questionnaire.description || ""),
-    language: String(questionnaire.language || ""),
-    questions: Array.isArray(questionnaire.questions) ? questionnaire.questions.map(normalizeQuestion) : []
+    clinic_state_or_province: process.env.CLINIC_STATE_OR_PROVINCE || "Singapore",
+    clinic_county_or_district: process.env.CLINIC_COUNTY_OR_DISTRICT || "Singapore",
+    clinic_city: process.env.CLINIC_CITY || "Singapore",
+    clinic_or_hospital_name: process.env.CLINIC_OR_HOSPITAL_NAME || "Tan Tock Seng Hospital",
+    clinic_floor: process.env.CLINIC_FLOOR || "3"
   };
 }
 
-function normalizeQuestion(question) {
-  const maxScore = Number(question.maxScore);
+function dateFacts() {
+  const timeZone = "Asia/Singapore";
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-SG", {
+    timeZone, year: "numeric", month: "long", day: "numeric", weekday: "long"
+  }).formatToParts(now).reduce((acc, part) => ({ ...acc, [part.type]: part.value }), {});
   return {
-    id: String(question.id || randomUUID()),
-    section: String(question.section || ""),
-    question: String(question.question || ""),
-    questionChinese: String(question.questionChinese || ""),
-    scoringNotes: String(question.scoringNotes || ""),
-    maxScore: Number.isFinite(maxScore) && maxScore >= 0 ? maxScore : 0,
-    capability: normalizeCapability(question.capability)
+    current_year: parts.year,
+    current_month: parts.month,
+    current_date: parts.day,
+    current_day_of_week: parts.weekday
   };
 }
 
-function normalizeCapability(value) {
-  const allowed = new Set(["voice", "camera", "canvas", "reading", "writing", "copying"]);
-  return allowed.has(value) ? value : "voice";
+function resolveToken(token, clinic, facts) {
+  if (token === "current_season") {
+    return SEASON_ACCEPTED;
+  }
+  if (token in facts) {
+    return facts[token];
+  }
+  if (token in clinic) {
+    return clinic[token];
+  }
+  return token;
 }
 
-function inferCapability(section, question, scoringNotes) {
-  const text = `${section} ${question} ${scoringNotes}`.toLowerCase();
-  if (text.includes("close your eyes") || text.includes("reading")) {
-    return "reading";
+function resolveSessionContext(questionnaire) {
+  const clinic = clinicConfig();
+  const facts = dateFacts();
+  const resolvedAnswers = {};
+  for (const section of questionnaire.sections) {
+    for (const item of section.items) {
+      if (item.scoring.mode !== "code") {
+        continue;
+      }
+      if (item.type === "spoken_memory_recall") {
+        // recall compares against the registration target items
+        const reg = questionnaire.sections
+          .flatMap((s) => s.items)
+          .find((i) => i.id === "registration_three_words");
+        resolvedAnswers[item.id] = reg?.targetItems || [];
+      } else if (item.expectedAnswer && typeof item.expectedAnswer === "string" && !item.expectedSequence) {
+        resolvedAnswers[item.id] = resolveToken(item.expectedAnswer, clinic, facts);
+      }
+    }
   }
-  if (text.includes("write a sentence") || text.includes("writing")) {
-    return "writing";
-  }
-  if (text.includes("copy this picture") || text.includes("pentagon") || text.includes("copying")) {
-    return "copying";
-  }
-  if (text.includes("show the patient") || text.includes("takes paper") || text.includes("folds it")) {
-    return "camera";
-  }
-  return "voice";
-}
-
-function splitMarkdownTableRow(line) {
-  return line.slice(1, -1).split("|").map((cell) => cell.trim());
-}
-
-function stripMarkdown(value) {
-  return String(value)
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/\*\*/g, "")
-    .replace(/[“”]/g, "\"")
-    .replace(/[‘’]/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
+  return { resolvedAnswers, clinic, dateFacts: facts };
 }
 
 function serveStatic(req, res, pathname) {
@@ -301,7 +358,7 @@ function serveStatic(req, res, pathname) {
     return;
   }
 
-  const routePath = pathname === "/" || pathname === "/admin" || pathname === "/report" || pathname === "/log" ? "/index.html" : pathname;
+  const routePath = resolveStaticRoutePath(pathname);
   const safePath = normalize(decodeURIComponent(routePath)).replace(/^(\.\.[/\\])+/, "");
   const filePath = resolve(join(publicDir, safePath));
 
@@ -352,11 +409,4 @@ function loadEnvFile(path) {
     }
     process.env[match[1]] = match[2].replace(/^["']|["']$/g, "");
   }
-}
-
-function slugify(value) {
-  return String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "questionnaire";
 }

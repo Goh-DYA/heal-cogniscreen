@@ -305,7 +305,7 @@ main {
 .call-stage,
 .task-panel,
 .report-grid article,
-.question-card,
+.section-card,
 .modality-block,
 .editor-grid,
 .question-editor {
@@ -516,7 +516,7 @@ canvas {
   text-align: center;
 }
 
-.question-list {
+.section-list {
   display: grid;
   gap: 8px;
   margin: 0;
@@ -524,44 +524,69 @@ canvas {
   list-style: none;
 }
 
-.question-card {
+.section-card {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   padding: 12px;
   box-shadow: none;
 }
 
-.question-card[role="button"] {
-  cursor: pointer;
-}
-
-.question-card[role="button"]:hover {
-  border-color: #a9b7c6;
-  background: #f8fbfd;
-}
-
-.question-card.active {
+.section-card.active {
   outline: 2px solid var(--blue);
 }
 
-.question-card.complete {
+.section-card.complete {
   background: #eef8f3;
 }
 
-.question-card p,
-.question-card h4 {
+.section-card p,
+.section-card h4 {
   margin: 0;
 }
 
-.question-card h4 {
+.section-card h4 {
   font-size: 0.95rem;
 }
 
-.question-card p {
+.section-card p {
   margin-top: 3px;
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.section-metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-score {
+  min-width: 48px;
+  color: var(--ink);
+  font-weight: 800;
+  text-align: right;
+}
+
+.section-progress {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--green) var(--section-progress), #dce4ec 0);
+}
+
+.section-progress span {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
 .score-pill {
@@ -645,10 +670,139 @@ canvas {
   font-size: 2.6rem;
 }
 
+.report-article-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.report-article-header h3 {
+  margin: 0;
+}
+
+.section-editor {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.section-editor-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.section-head-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1 1 320px;
+}
+
+.section-head-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.section-items {
+  display: grid;
+  gap: 18px;
+}
+
+.section-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.section-page-button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+}
+
+.section-page-button.active {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.section-page-ellipsis {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.report-pagination {
+  display: grid;
+  grid-template-columns: repeat(9, 34px);
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+  width: 354px;
+}
+
+.report-page-button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+}
+
+.report-page-button.active {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.report-page-ellipsis {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.report-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-section-heading h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.report-section-heading strong {
+  margin-left: auto;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
 .response-row {
   display: grid;
-  gap: 7px;
-  padding: 12px 0;
+  gap: 8px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -656,13 +810,21 @@ canvas {
   border-bottom: 0;
 }
 
-.response-row h4,
+.response-row h5,
 .response-row p {
   margin: 0;
 }
 
+.response-row h5 {
+  font-size: 1rem;
+}
+
 .response-row p {
   color: var(--muted);
+}
+
+.response-row strong {
+  color: var(--ink);
 }
 
 .report-artifact {
