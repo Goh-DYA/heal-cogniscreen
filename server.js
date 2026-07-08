@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { dirname, extname, join, normalize, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { resolveStaticRoutePath } from "./public/routes.js";
@@ -29,7 +29,8 @@ export function resolveImageAssetPath(pathname) {
   }
   const safePath = normalize(imagePath);
   const filePath = resolve(join(imagesDir, safePath));
-  if (filePath !== imagesDir && !filePath.startsWith(`${imagesDir}/`)) {
+  const relativePath = relative(imagesDir, filePath);
+  if (relativePath === "" || relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
     return undefined;
   }
   return filePath;
