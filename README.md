@@ -2,12 +2,7 @@
 
 **CogniScreen administers medical questionnaires over an AI voice call using the OpenAI Realtime API.** 
 
-Scenario: A patient joins a telehealth-style call, talks through one question at a time with an OpenAI Realtime voice assistant, uses camera and canvas tools for observation and drawing tasks, and a clinician reviews a scored report afterward. The bundled questionnaire is the Mini-Mental State Examination (MMSE).
-
-**Team Name**: HEAL
-- Adison Goh
-- Jace Han
-- Gary Ang
+Scenario: A patient joins a telehealth-style call, talks through one question at a time with an OpenAI Realtime voice assistant, uses camera and canvas tools for observation and drawing tasks, and a clinician reviews a scored report afterward. The bundled questionnaire is the Mini-Mental State Examination (MMSE) used for dementia screening.
 
 ## Demo
 
@@ -132,3 +127,14 @@ End-to-end Realtime testing requires browser microphone permission and a valid O
 - This is a prototype: no authentication and no production persistence layer.
 </content>
 </invoke>
+
+---
+
+## Contributors
+
+This project was initiated as part of the Codex for Healthcare Hackathon organised by ​A*STAR, IMDA, and OpenAI from 4th to 9th July 2026.
+
+**Team Name**: HEAL
+- Adison Goh
+- Jace Han
+- Dr Gary Ang
