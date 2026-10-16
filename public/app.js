@@ -1,16 +1,21 @@
+import {
+  activeQuestionInstruction,
+  activeSectionReinforcement,
+  buildFocusedInstructions,
+  buildReadinessIntroductionInstructions,
+  completionFarewellInstruction,
+  nextQuestionInstruction,
+  readinessStartInstruction,
+  sequenceCorrectionInstruction
+} from "./realtime-instructions.js";
 import { createReportPdf } from "./report-pdf.js";
 import { pagerPages, reportItemDetails, reportMediaArtifacts, reportPage, reportSections, restoreMediaArtifacts } from "./report.js";
+import { ITEM_TYPES } from "./schema.js";
 import { summarizeSections } from "./section-summary.js";
 import { viewForPath } from "./routes.js";
+import { countAnswered, sumMaxScores, sumScores } from "./scoring.js";
 
 const reportStorageKey = "heal-questionnaire-report";
-const activeSectionReinforcement = "Use only the active section in the current session instructions; do not ask or score any other section.";
-const completionFarewellInstruction = [
-  "All questions are recorded.",
-  "Thank the patient warmly for being cooperative, offer brief encouragement, and say goodbye.",
-  "Tell the patient they may end the call using the on-screen End call button.",
-  "Do not call any tool after the farewell."
-].join(" ");
 
 const els = typeof document !== "undefined" ? {
   appShell: document.querySelector("#appShell"),
@@ -294,14 +299,7 @@ function beginRealtimeAdministration() {
   }
 
   sendRealtimeContent([
-    {
-      type: "input_text",
-      text: [
-        "Start the call with the patient readiness introduction only.",
-        "Do not ask, preview, score, or mention the first questionnaire item yet.",
-        "After the patient responds that they are ready, continue with the active question using the latest session instructions."
-      ].join(" ")
-    }
+    { type: "input_text", text: readinessStartInstruction }
   ], { readinessIntroduction: true });
 }
 
@@ -368,15 +366,15 @@ function maybeHandleFunctionCall(item, responseId) {
 
   appendTranscript("system", `Calling tool: ${formatToolName(item.name)}.`);
   const output = handleToolCall(item.name, args);
-  if (item.call_id && state.dataChannel?.readyState === "open") {
-    state.dataChannel.send(JSON.stringify({
+  if (item.call_id && isRealtimeChannelOpen()) {
+    sendRealtimeEvent({
       type: "conversation.item.create",
       item: {
         type: "function_call_output",
         call_id: item.call_id,
         output: JSON.stringify(output)
       }
-    }));
+    });
     appendTranscript("system", `Tool complete: ${formatToolName(item.name)}.`);
     const spokeInThisResponse = responseId ? state.spokenResponseIds.has(responseId) : false;
     if (!output.finished && (!spokeInThisResponse || output.advancedToNextQuestion)) {
@@ -474,7 +472,7 @@ function recordResponse(args) {
     nextQuestionId: nextQuestion?.id || null,
     advancedToNextQuestion: Boolean(nextQuestion),
     continueInstruction: nextQuestion
-      ? `The active question has been updated to questionId "${nextQuestion.id}". Immediately begin guiding the patient through this active question using the current session instructions. Do not stop after a transition phrase or wait for patient confirmation before asking the question.`
+      ? nextQuestionInstruction(nextQuestion.id)
       : completionFarewellInstruction
   };
 }
@@ -530,7 +528,7 @@ function setActiveQuestionFromTool(questionId) {
   return {
     ok: true,
     expectedQuestionId: question.id,
-    continueInstruction: `The active question is "${question.id}". Ask only the active section from the current session instructions until it is recorded.`
+    continueInstruction: activeQuestionInstruction(question.id)
   };
 }
 
@@ -748,20 +746,20 @@ function sendImageArtifact(dataUrl, message) {
 }
 
 function updateRealtimeSessionInstructions(question) {
-  if (!state.dataChannel || state.dataChannel.readyState !== "open") {
+  if (!isRealtimeChannelOpen()) {
     return;
   }
 
-  state.dataChannel.send(JSON.stringify({
+  sendRealtimeEvent({
     type: "session.update",
     session: {
-      instructions: buildFocusedInstructions(question)
+      instructions: focusedInstructionsFor(question)
     }
-  }));
+  });
 }
 
 function sendRealtimeResponse(instructions, options = {}) {
-  if (!state.dataChannel || state.dataChannel.readyState !== "open") {
+  if (!isRealtimeChannelOpen()) {
     appendTranscript("system", "Realtime connection is not ready.");
     return;
   }
@@ -773,27 +771,35 @@ function sendRealtimeResponse(instructions, options = {}) {
       : buildResponseInstructions(instructions)
   };
 
-  state.dataChannel.send(JSON.stringify({
+  sendRealtimeEvent({
     type: "response.create",
     response
-  }));
+  });
 }
 
 function sendRealtimeContent(content, options = {}) {
-  if (!state.dataChannel || state.dataChannel.readyState !== "open") {
+  if (!isRealtimeChannelOpen()) {
     appendTranscript("system", "Realtime connection is not ready.");
     return;
   }
 
-  state.dataChannel.send(JSON.stringify({
+  sendRealtimeEvent({
     type: "conversation.item.create",
     item: {
       type: "message",
       role: "user",
       content
     }
-  }));
+  });
   sendRealtimeResponse(options.instructions, options);
+}
+
+function isRealtimeChannelOpen() {
+  return state.dataChannel?.readyState === "open";
+}
+
+function sendRealtimeEvent(event) {
+  state.dataChannel.send(JSON.stringify(event));
 }
 
 function finishQuestionnaire(status, summary) {
@@ -928,53 +934,51 @@ function renderSectionPager(totalSections) {
     return nav;
   }
 
-  const current = state.editorSectionPage;
-  nav.append(createSectionPageButton("<", current - 1, current === 0));
-  for (const pageNumber of pagerPages(totalSections, current)) {
-    if (pageNumber === "…") {
-      const ellipsis = document.createElement("span");
-      ellipsis.className = "section-page-ellipsis";
-      ellipsis.textContent = "..";
-      nav.append(ellipsis);
-      continue;
-    }
-    const pageButton = createSectionPageButton(String(pageNumber), pageNumber - 1, false);
-    pageButton.classList.toggle("active", pageNumber - 1 === current);
-    nav.append(pageButton);
-  }
-  nav.append(createSectionPageButton(">", current + 1, current >= totalSections - 1));
-  return nav;
-}
-
-function createSectionPageButton(label, pageIndex, disabled) {
-  const button = document.createElement("button");
-  button.className = "section-page-button";
-  button.type = "button";
-  button.textContent = label;
-  button.disabled = disabled;
-  button.addEventListener("click", () => {
+  appendPagerControls(nav, totalSections, state.editorSectionPage, "section-page", (pageIndex) => {
     state.editorSectionPage = pageIndex;
     renderEditor();
   });
+  return nav;
+}
+
+function appendPagerControls(container, pageCount, currentPage, classPrefix, onSelect) {
+  container.append(createPageButton("<", currentPage - 1, currentPage === 0, classPrefix, onSelect));
+  for (const pageNumber of pagerPages(pageCount, currentPage)) {
+    if (pageNumber === "…") {
+      const ellipsis = document.createElement("span");
+      ellipsis.className = `${classPrefix}-ellipsis`;
+      ellipsis.textContent = "..";
+      container.append(ellipsis);
+      continue;
+    }
+
+    const pageButton = createPageButton(String(pageNumber), pageNumber - 1, false, classPrefix, onSelect);
+    pageButton.classList.toggle("active", pageNumber - 1 === currentPage);
+    container.append(pageButton);
+  }
+  container.append(createPageButton(">", currentPage + 1, currentPage >= pageCount - 1, classPrefix, onSelect));
+}
+
+function createPageButton(label, pageIndex, disabled, classPrefix, onSelect) {
+  const button = document.createElement("button");
+  button.className = `${classPrefix}-button`;
+  button.type = "button";
+  button.textContent = label;
+  button.disabled = disabled;
+  button.addEventListener("click", () => onSelect(pageIndex));
   return button;
 }
 
 function createItemEditor(item, sectionIndex, itemIndex) {
   const wrapper = document.createElement("div");
   wrapper.className = "question-editor";
-  const types = [
-    "spoken_response", "spoken_memory_encoding", "spoken_memory_recall",
-    "spoken_calculation_sequence", "spoken_spelling", "object_naming",
-    "spoken_repetition", "physical_command", "written_instruction_response",
-    "written_response", "drawing_copy"
-  ];
   wrapper.innerHTML = `
     <label>Item ID
       <input data-item-field="id" value="${escapeAttribute(item.id)}">
     </label>
     <label>Type
       <select data-item-field="type">
-        ${types.map((type) => `<option value="${type}" ${item.type === type ? "selected" : ""}>${type}</option>`).join("")}
+        ${ITEM_TYPES.map((type) => `<option value="${type}" ${item.type === type ? "selected" : ""}>${type}</option>`).join("")}
       </select>
     </label>
     <label class="wide">Prompt (English)
@@ -1076,9 +1080,9 @@ async function saveQuestionnaire() {
 function renderReport() {
   const items = administeredScoringItems();
   const itemIds = new Set(items.map((item) => item.id));
-  const completeCount = items.filter((item) => state.responses.has(item.id)).length;
-  const maxScore = items.reduce((sum, item) => sum + Number(item.maxScore || 0), 0);
-  const score = scoreForItems(items);
+  const completeCount = countAnswered(items, state.responses);
+  const maxScore = sumMaxScores(items);
+  const score = sumScores(items, state.responses);
   els.reportTotal.textContent = `${score} / ${maxScore}`;
   els.reportStatus.textContent = state.lastReportSummary || `${completeCount} of ${items.length} items recorded.`;
   els.reportPagination.innerHTML = "";
@@ -1094,10 +1098,7 @@ function renderReport() {
   }
 
   for (const entry of state.transcript) {
-    const item = document.createElement("div");
-    item.className = `utterance ${entry.role}`;
-    item.textContent = entry.text;
-    els.reportTranscript.append(item);
+    els.reportTranscript.append(createUtteranceElement(entry.role, entry.text));
   }
 }
 
@@ -1106,34 +1107,10 @@ function renderReportPagination(pageCount, currentPage) {
     return;
   }
 
-  els.reportPagination.append(createReportPageButton("<", currentPage - 1, currentPage === 0));
-  for (const pageNumber of pagerPages(pageCount, currentPage)) {
-    if (pageNumber === "…") {
-      const ellipsis = document.createElement("span");
-      ellipsis.className = "report-page-ellipsis";
-      ellipsis.textContent = "..";
-      els.reportPagination.append(ellipsis);
-      continue;
-    }
-
-    const pageButton = createReportPageButton(String(pageNumber), pageNumber - 1, false);
-    pageButton.classList.toggle("active", pageNumber - 1 === currentPage);
-    els.reportPagination.append(pageButton);
-  }
-  els.reportPagination.append(createReportPageButton(">", currentPage + 1, currentPage >= pageCount - 1));
-}
-
-function createReportPageButton(label, pageIndex, disabled) {
-  const button = document.createElement("button");
-  button.className = "report-page-button";
-  button.type = "button";
-  button.textContent = label;
-  button.disabled = disabled;
-  button.addEventListener("click", () => {
+  appendPagerControls(els.reportPagination, pageCount, currentPage, "report-page", (pageIndex) => {
     state.reportPageIndex = pageIndex;
     renderReport();
   });
-  return button;
 }
 
 function renderReportSection(section) {
@@ -1217,13 +1194,12 @@ async function downloadReport() {
 function buildReportDocument() {
   const items = administeredScoringItems();
   const itemIds = new Set(items.map((item) => item.id));
-  const maxScore = items.reduce((sum, item) => sum + Number(item.maxScore || 0), 0);
   return {
     title: state.activeQuestionnaire?.title || "Questionnaire report",
     createdAt: new Date().toISOString(),
-    totalScore: scoreForItems(items),
-    maxScore,
-    status: state.lastReportSummary || `${items.filter((item) => state.responses.has(item.id)).length} of ${items.length} items recorded.`,
+    totalScore: sumScores(items, state.responses),
+    maxScore: sumMaxScores(items),
+    status: state.lastReportSummary || `${countAnswered(items, state.responses)} of ${items.length} items recorded.`,
     sections: reportSections(state.activeQuestionnaire?.sections, state.responses, itemIds).map((section) => ({
       title: section.title,
       score: section.score,
@@ -1275,7 +1251,6 @@ function restoreReport() {
       state.mediaArtifacts = restoreMediaArtifacts(report.mediaArtifacts);
       renderPatientTranscript();
       renderQuestionnaire();
-      renderLog();
     }
   } catch (error) {
     console.error(error);
@@ -1293,7 +1268,6 @@ function resetProgress() {
   resetSessionState();
   renderModality("");
   renderQuestionnaire();
-  renderLog();
   setAppStatus("Progress reset.");
 }
 
@@ -1353,26 +1327,27 @@ function appendAssistantDelta(delta) {
 }
 
 function appendTranscript(role, text) {
-  const item = document.createElement("div");
-  item.className = `utterance ${role}`;
-  item.textContent = text;
+  const item = createUtteranceElement(role, text);
   els.transcript.append(item);
   els.transcript.scrollTop = els.transcript.scrollHeight;
   state.transcript.push({ role, text, at: new Date().toISOString() });
   renderTranscriptPanel();
   renderReport();
   persistReport("");
-  renderLog();
+  return item;
+}
+
+function createUtteranceElement(role, text) {
+  const item = document.createElement("div");
+  item.className = `utterance ${role}`;
+  item.textContent = text;
   return item;
 }
 
 function renderPatientTranscript() {
   els.transcript.innerHTML = "";
   for (const entry of state.transcript) {
-    const item = document.createElement("div");
-    item.className = `utterance ${entry.role}`;
-    item.textContent = entry.text;
-    els.transcript.append(item);
+    els.transcript.append(createUtteranceElement(entry.role, entry.text));
   }
   renderTranscriptPanel();
 }
@@ -1391,7 +1366,6 @@ function renderRoute() {
     link.classList.toggle("active", link.dataset.route === route);
   }
   renderReport();
-  renderLog();
 }
 
 function setConnectionStatus(value) {
@@ -1456,13 +1430,6 @@ function administeredScoringItems() {
   return allItems().filter((item) => !isLocked(item) && !isFallbackSourceReplaced(item));
 }
 
-function scoreForItems(items) {
-  return items.reduce((sum, item) => {
-    const response = state.responses.get(item.id);
-    return sum + Number(response?.score || 0);
-  }, 0);
-}
-
 function getQuestion(questionId) {
   return allItems().find((item) => item.id === questionId);
 }
@@ -1477,14 +1444,13 @@ function getSequenceCorrectionInstruction() {
     return completionFarewellInstruction;
   }
 
-  return `The next required question is questionId "${nextQuestion.id}". Ask only the active section from the current session instructions, and do not repeat any completed question.`;
+  return sequenceCorrectionInstruction(nextQuestion.id);
 }
 
 function progressSnapshot() {
   const items = administeredScoringItems();
-  const completed = items.filter((item) => state.responses.has(item.id)).length;
   return {
-    completed,
+    completed: countAnswered(items, state.responses),
     total: items.length,
     activeQuestionId: state.activeQuestionId,
     completedQuestionIds: [...state.responses.keys()]
@@ -1500,7 +1466,7 @@ function buildResponseInstructions(instructions) {
   }
 
   const question = getQuestion(state.activeQuestionId);
-  const focusedInstructions = question ? buildFocusedInstructions(question) : activeSectionReinforcement;
+  const focusedInstructions = question ? focusedInstructionsFor(question) : activeSectionReinforcement;
   return [
     focusedInstructions,
     "",
@@ -1509,111 +1475,14 @@ function buildResponseInstructions(instructions) {
   ].filter(Boolean).join("\n");
 }
 
-function buildReadinessIntroductionInstructions(instructions) {
-  return [
-    "You are a clinical questionnaire assistant starting a medical screening questionnaire by voice.",
-    "Begin with a warm, genuine, patient-friendly welcome.",
-    "Briefly explain that you will guide the patient through the questionnaire one question at a time and record their answers for the clinical team.",
-    "Ask whether the patient is ready to begin.",
-    "Stop after asking whether the patient is ready.",
-    "Do not ask, preview, score, or mention any questionnaire item yet.",
-    "Do not call set_active_question or record_question_result during this readiness introduction.",
-    instructions ? `Current turn instruction: ${instructions}` : ""
-  ].filter(Boolean).join("\n");
-}
-
-function buildFocusedInstructions(question) {
+function focusedInstructionsFor(question) {
   const items = administeredScoringItems();
-  const completedCount = items.filter((item) => state.responses.has(item.id)).length;
-  const objectNamingInstructions = question?.type === "object_naming" ? [
-    "For this object-naming item, ask the patient to look at the image on screen and tell you what the item is.",
-    "Do not say accepted answers, expected answers, object labels, filenames, material names, or scoring examples aloud.",
-    "Use answer-bearing metadata only after the patient responds, and only for scoring."
-  ] : [];
-  return [
-    "You are a clinical questionnaire assistant administering a medical screening questionnaire by voice.",
-    "You are not diagnosing, treating, or giving medical advice.",
-    "The client UI is the source of truth for questionnaire order and active section.",
-    "Administer exactly one active item at a time.",
-    activeSectionReinforcement,
-    "Do not mention, preview, combine, ask, score, or infer any other questionnaire item.",
-    "If the patient discusses another item, briefly redirect to the active item.",
-    "Personalize phrasing to the patient context if provided, but do not change the scoring requirement.",
-    "Ask the patient all aspects needed from the active item to fully assess it.",
-    "Avoid spoonfeeding the patient with the examples.",
-    "Do not move on until the current answer is complete enough to score.",
-    "Ask focused follow-ups only for the active item.",
-    "For observation, reading, writing, and copying tasks, instruct the patient to use the on-screen camera or canvas controls when relevant.",
-    "If the patient asks to stop or end the call, respond empathetically, say you understand, say goodbye, and tell them they may use the on-screen End call button.",
-    "Call set_active_question before asking the active question if it has not already been set.",
-    "Call record_question_result only when the active item is complete enough to score.",
-    "Assign the numeric score yourself using the active item's scoring notes, expected answer, accepted answers, target items, expected sequence, and observed media when available. Never exceed the item maximum score.",
-    "Include brief clinician notes explaining the score.",
-    "Include the exact response or behavior you relied on when available.",
-    "If media was required, mention whether the camera or canvas artifact was reviewed.",
-    ...objectNamingInstructions,
-    "",
-    `Selected questionnaire: ${state.activeQuestionnaire?.title || ""}`,
-    `Questionnaire ID: ${state.activeQuestionnaire?.id || ""}`,
-    `Completed count: ${completedCount} of ${items.length}`,
-    "Active item JSON:",
-    JSON.stringify(focusedItemPayload(question))
-  ].join("\n");
-}
-
-function focusedItemPayload(item) {
-  const section = (state.activeQuestionnaire?.sections || []).find((entry) => entry.id === item.sectionId);
-  const isObjectNaming = item.type === "object_naming";
-  const payload = {
-    questionId: item.id,
-    section: section?.title || item.sectionId,
-    type: item.type,
-    prompt: isObjectNaming
-      ? { ...item.prompt, en: "Please look at the image on screen and tell me what this item is." }
-      : item.prompt,
-    maxScore: item.maxScore,
-    capability: item.capability,
-    scoringNotes: isObjectNaming
-      ? "Ask the patient to name the visible item without naming it for them. After the patient responds, score against scoringOnlyAcceptedAnswers."
-      : item.scoringNotes || ""
-  };
-  const resolvedAnswer = state.sessionContext?.resolvedAnswers?.[item.id];
-  if (resolvedAnswer !== undefined) {
-    payload.resolvedExpectedAnswer = resolvedAnswer;
-  }
-  if (item.expectedAnswer !== undefined) {
-    payload.expectedAnswer = item.expectedAnswer;
-  }
-  if (item.expectedSequence !== undefined) {
-    payload.expectedSequence = item.expectedSequence;
-  }
-  if (item.targetItems !== undefined) {
-    payload.targetItems = item.targetItems;
-  }
-  if (item.acceptedAnswers !== undefined && isObjectNaming) {
-    payload.scoringOnlyAcceptedAnswers = item.acceptedAnswers;
-  } else if (item.acceptedAnswers !== undefined) {
-    payload.acceptedAnswers = item.acceptedAnswers;
-  }
-  if (item.observableSteps !== undefined) {
-    payload.observableSteps = item.observableSteps;
-  }
-  if (item.visualStimulus !== undefined && !isObjectNaming) {
-    payload.visualStimulus = item.visualStimulus;
-  }
-  if (item.administerOnlyIf) {
-    payload.administerOnlyIf = item.administerOnlyIf;
-  }
-  if (item.fallbackIfUnable) {
-    payload.fallbackIfUnable = item.fallbackIfUnable;
-  }
-  if (item.postItemInstruction) {
-    payload.postItemInstruction = item.postItemInstruction;
-  }
-  if (item.requiresMaterials !== undefined && !isObjectNaming) {
-    payload.requiresMaterials = item.requiresMaterials;
-  }
-  return payload;
+  return buildFocusedInstructions(question, {
+    questionnaire: state.activeQuestionnaire,
+    completedCount: countAnswered(items, state.responses),
+    totalCount: items.length,
+    resolvedAnswers: state.sessionContext?.resolvedAnswers
+  });
 }
 
 function clampScore(score, maxScore) {

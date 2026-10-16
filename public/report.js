@@ -1,3 +1,5 @@
+import { sumMaxScores, sumScores } from "./scoring.js";
+
 export function reportPage(sections, responses, itemIds, pageIndex) {
   const visibleSections = reportSections(sections, responses, itemIds);
   const pageCount = visibleSections.length;
@@ -16,8 +18,8 @@ export function reportSections(sections, responses, itemIds) {
       const items = (section.items || []).filter((item) => itemIds.has(item.id));
       return {
         title: section.title || section.id,
-        score: scoreItems(items, responses),
-        maxScore: maxScoreItems(items),
+        score: sumScores(items, responses),
+        maxScore: sumMaxScores(items),
         items
       };
     })
@@ -80,14 +82,6 @@ function formatReportValue(value) {
     return Object.values(value).filter(Boolean).join(" / ");
   }
   return String(value);
-}
-
-function scoreItems(items, responses) {
-  return items.reduce((sum, item) => sum + Number(responses.get(item.id)?.score || 0), 0);
-}
-
-function maxScoreItems(items) {
-  return items.reduce((sum, item) => sum + Number(item.maxScore || 0), 0);
 }
 
 function scoredByLabel(scoredBy) {

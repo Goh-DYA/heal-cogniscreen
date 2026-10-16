@@ -1,11 +1,13 @@
+import { countAnswered, sumMaxScores, sumScores } from "./scoring.js";
+
 export function summarizeSections(sections, responses, activeQuestionId, itemIds) {
   return (sections || []).map((section) => {
     const sourceItems = section.items || [];
     const items = itemIds ? sourceItems.filter((item) => itemIds.has(item.id)) : sourceItems;
-    const completeCount = items.filter((item) => responses.has(item.id)).length;
+    const completeCount = countAnswered(items, responses);
     const itemCount = items.length;
-    const score = items.reduce((sum, item) => sum + Number(responses.get(item.id)?.score || 0), 0);
-    const maxScore = items.reduce((sum, item) => sum + Number(item.maxScore || 0), 0);
+    const score = sumScores(items, responses);
+    const maxScore = sumMaxScores(items);
     const nextItem = items.find((item) => !responses.has(item.id)) || items[0];
 
     return {

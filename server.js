@@ -5,7 +5,8 @@ import { dirname, extname, isAbsolute, join, normalize, relative, resolve, sep }
 import { fileURLToPath } from "node:url";
 
 import { resolveStaticRoutePath } from "./public/routes.js";
-import { normalizeQuestionnaire } from "./public/schema.js";
+import { cloneJson, normalizeQuestionnaire } from "./public/schema.js";
+import { sumMaxScores } from "./public/scoring.js";
 
 export { resolveStaticRoutePath } from "./public/routes.js";
 
@@ -17,6 +18,10 @@ const imagesDir = resolve(rootDir, "images");
 const dataDir = resolve(rootDir, "data");
 const questionnaireDataPath = resolve(dataDir, "questionnaires.json");
 const promptPath = resolve(rootDir, "prompts", "questionnaire-realtime.md");
+const realtimeCallsUrl = "https://api.openai.com/v1/realtime/calls";
+const clinicTimeZone = "Asia/Singapore";
+const maxSdpBodyLength = 2_000_000;
+const maxQuestionnaireBodyLength = 1_000_000;
 
 export function resolveImageAssetPath(pathname) {
   if (!pathname.startsWith("/images/")) {
@@ -110,7 +115,7 @@ async function createRealtimeSession(req, res, questionnaireId) {
     return;
   }
 
-  const sdp = await readTextBody(req, 2_000_000);
+  const sdp = await readTextBody(req, maxSdpBodyLength);
   if (!sdp.trim()) {
     sendJson(res, 400, { error: "Missing SDP offer" });
     return;
@@ -124,7 +129,7 @@ async function createRealtimeSession(req, res, questionnaireId) {
 
   let response;
   try {
-    response = await fetch("https://api.openai.com/v1/realtime/calls", {
+    response = await fetch(realtimeCallsUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -141,8 +146,7 @@ async function createRealtimeSession(req, res, questionnaireId) {
 
   const responseText = await response.text();
   if (!response.ok) {
-    res.writeHead(response.status, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ error: "Realtime session failed", detail: responseText }));
+    sendJson(res, response.status, { error: "Realtime session failed", detail: responseText });
     return;
   }
 
@@ -245,7 +249,7 @@ export function realtimeNetworkErrorBody(error) {
 }
 
 async function saveQuestionnaire(req, res, questionnaireId) {
-  const body = await readJsonBody(req, 1_000_000);
+  const body = await readJsonBody(req, maxQuestionnaireBodyLength);
   const nested = denormalizeQuestionnaire(body);
 
   const questionnaires = loadRawQuestionnaires();
@@ -261,10 +265,6 @@ async function saveQuestionnaire(req, res, questionnaireId) {
   mkdirSync(dirname(questionnaireDataPath), { recursive: true });
   writeFileSync(questionnaireDataPath, `${JSON.stringify({ questionnaires }, null, 2)}\n`, "utf8");
   sendJson(res, 200, { questionnaire: normalizeQuestionnaire(nested) });
-}
-
-function cloneJson(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
 function cleanScoring(scoring) {
@@ -286,15 +286,13 @@ export function denormalizeQuestionnaire(model) {
     title: model.title,
     version: model.version || "1.0",
     default_language: model.defaultLanguage || "",
-    total_max_score: (model.sections || [])
-      .flatMap((section) => section.items || [])
-      .reduce((sum, item) => sum + Number(item.maxScore || 0), 0),
+    total_max_score: sumMaxScores((model.sections || []).flatMap((section) => section.items || [])),
     global_rules: model.globalRules || {},
     materials_required: model.materialsRequired || [],
     sections: (model.sections || []).map((section) => ({
       id: section.id,
       title: section.title,
-      max_score: (section.items || []).reduce((sum, item) => sum + Number(item.maxScore || 0), 0),
+      max_score: sumMaxScores(section.items || []),
       items: (section.items || []).map(denormalizeItem)
     }))
   };
@@ -350,7 +348,7 @@ export function buildInstructions(questionnaire, context) {
     "",
     `Selected questionnaire: ${questionnaire.title}`,
     `Questionnaire ID: ${questionnaire.id}`,
-    `Today (Asia/Singapore): ${context.dateFacts.current_day_of_week}, ${context.dateFacts.current_date} ${context.dateFacts.current_month} ${context.dateFacts.current_year}`,
+    `Today (${clinicTimeZone}): ${context.dateFacts.current_day_of_week}, ${context.dateFacts.current_date} ${context.dateFacts.current_month} ${context.dateFacts.current_year}`,
     `Clinic: ${context.clinic.clinic_or_hospital_name}, floor ${context.clinic.clinic_floor}, ${context.clinic.clinic_city}, state/province ${context.clinic.clinic_state_or_province}, county/district ${context.clinic.clinic_county_or_district}`,
     "The client UI is the source of truth for the active item.",
     "Item details will be provided through session updates.",
@@ -371,10 +369,9 @@ function clinicConfig() {
 }
 
 function dateFacts() {
-  const timeZone = "Asia/Singapore";
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-SG", {
-    timeZone, year: "numeric", month: "long", day: "numeric", weekday: "long"
+    timeZone: clinicTimeZone, year: "numeric", month: "long", day: "numeric", weekday: "long"
   }).formatToParts(now).reduce((acc, part) => ({ ...acc, [part.type]: part.value }), {});
   return {
     current_year: parts.year,
@@ -401,14 +398,14 @@ function resolveSessionContext(questionnaire) {
   const clinic = clinicConfig();
   const facts = dateFacts();
   const resolvedAnswers = {};
+  // recall compares against the registration target items
+  const registrationItem = questionnaire.sections
+    .flatMap((section) => section.items)
+    .find((item) => item.id === "registration_three_words");
   for (const section of questionnaire.sections) {
     for (const item of section.items) {
       if (item.type === "spoken_memory_recall") {
-        // recall compares against the registration target items
-        const reg = questionnaire.sections
-          .flatMap((s) => s.items)
-          .find((i) => i.id === "registration_three_words");
-        resolvedAnswers[item.id] = reg?.targetItems || [];
+        resolvedAnswers[item.id] = registrationItem?.targetItems || [];
       } else if (item.expectedAnswer && typeof item.expectedAnswer === "string" && !item.expectedSequence) {
         resolvedAnswers[item.id] = resolveToken(item.expectedAnswer, clinic, facts);
       }
@@ -420,16 +417,12 @@ function resolveSessionContext(questionnaire) {
 function serveStatic(req, res, pathname) {
   const imagePath = resolveImageAssetPath(pathname);
   if (imagePath && existsSync(imagePath)) {
-    res.writeHead(200, {
-      "Content-Type": contentTypes.get(extname(imagePath)) || "application/octet-stream"
-    });
-    createReadStream(imagePath).pipe(res);
+    streamFile(res, imagePath);
     return;
   }
 
   if (pathname === "/mmse_picture_copying.png") {
-    res.writeHead(200, { "Content-Type": "image/png" });
-    createReadStream(resolve(docsDir, "mmse_picture_copying.png")).pipe(res);
+    streamFile(res, resolve(docsDir, "mmse_picture_copying.png"));
     return;
   }
 
@@ -442,6 +435,10 @@ function serveStatic(req, res, pathname) {
     return;
   }
 
+  streamFile(res, filePath);
+}
+
+function streamFile(res, filePath) {
   res.writeHead(200, {
     "Content-Type": contentTypes.get(extname(filePath)) || "application/octet-stream"
   });

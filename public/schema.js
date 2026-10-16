@@ -5,7 +5,14 @@ const CAPABILITY_BY_TYPE = {
   written_response: "writing"
 };
 
-function cloneJson(value) {
+export const ITEM_TYPES = [
+  "spoken_response", "spoken_memory_encoding", "spoken_memory_recall",
+  "spoken_calculation_sequence", "spoken_spelling", "object_naming",
+  "spoken_repetition", "physical_command", "written_instruction_response",
+  "written_response", "drawing_copy"
+];
+
+export function cloneJson(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
